@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sparkesykkel Spill</title>
+    <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+    <div class="game-container">
+        <div class="game-header" role="banner">
+            <div class="top-bar">
+                <div class="logos">
+                    <img src="deathtrip.png" alt="Deathtrip Logo" class="logo deathtrip-logo">
+                    <img src="Ung i trafikken.png" alt="Ung i trafikken Logo" class="logo uit-logo">
+                </div>
+                <div class="theme-toggle">
+                    <label class="switch" for="darkModeToggle">
+                        <input type="checkbox" id="darkModeToggle" aria-label="Toggle dark mode">
+                        <span class="slider round"></span>
+                    </label>
+                    <span id="theme-label">Dark Mode</span>
+                </div>
+            </div>
+            <p class="score-display">Poengsum: <span id="score">0</span></p>
+        </div>
+
+        <canvas id="gameCanvas" aria-label="Sparkesykkel Spill" role="img"></canvas>
+
+        <div class="active-powerups" role="status" aria-live="polite">
+            <div class="powerup-info">
+                <h3>Aktive Power-ups:</h3>
+                <div id="powerupContainer"></div>
+            </div>
+        </div>
+
+        <div class="game-controls">
+            <button id="startBtn" aria-label="Start spill">Start Spill</button>
+            <button id="restartBtn" style="display: none;" aria-label="Spill igjen">Spill Igjen</button>
+
+            <div class="controls-help">
+                <p>Kontroller: Piltaster eller WASD</p>
+                <p>
+                    Samle power-ups:
+                    <span class="powerup-icon" aria-hidden="true">🛡️</span> <span>Skjold</span>,
+                    <span class="powerup-icon" aria-hidden="true">⚡</span> <span>Fart</span>,
+                    <span class="powerup-icon" aria-hidden="true">⏱️</span> <span>Slow Motion</span>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+    <script>
+        // Dark mode functionality
+        const darkModeToggle = document.getElementById('darkModeToggle');
+        const themeLabel = document.getElementById('theme-label');
+        
+        // Check for saved user preference
+        if (localStorage.getItem('darkMode') === 'enabled') {
+            document.body.classList.add('dark-mode');
+            darkModeToggle.checked = true;
+        }
+        
+        darkModeToggle.addEventListener('change', () => {
+            if (darkModeToggle.checked) {
+                document.body.classList.add('dark-mode');
+                localStorage.setItem('darkMode', 'enabled');
+                themeLabel.textContent = 'Light Mode';
+            } else {
+                document.body.classList.remove('dark-mode');
+                localStorage.setItem('darkMode', 'disabled');
+                themeLabel.textContent = 'Dark Mode';
+            }
+        });
+    </script>
+</body>
+
+</html>
