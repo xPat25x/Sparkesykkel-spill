@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const startBtn = document.getElementById('startBtn');
     const restartBtn = document.getElementById('restartBtn');
     const scoreDisplay = document.getElementById('score');
+    const soundToggle = document.getElementById('soundToggle');
 
     // Sett lerretstørrelse basert på elementets offset
     canvas.width = canvas.offsetWidth;
@@ -19,6 +20,15 @@ document.addEventListener('DOMContentLoaded', () => {
     let obstacleFrequency = 100; // Lavere tall = hyppigere hindringer
     let frameCount = 0;
     let debugMode = false; // Set to true to see hitboxes
+    
+    // Drunk driving variables
+    let isDrunk = true; // Keep true to enable the system
+    let drunkLevel = 0; // Start completely sober (0)
+    let swayAngle = 0;
+    let visionBlur = 0;
+    let lastRandomDirection = 0;
+    let randomDirectionTimer = 0;
+    let lastScoreThreshold = 0; // Track when to increase drunk level
 
     // Ytterligere innstillinger
     let timeOfDay = 25; 
@@ -27,7 +37,14 @@ document.addEventListener('DOMContentLoaded', () => {
     let motionBlurEnabled = false;
     let cameraShakeEnabled = true;
     let dynamicCameraEnabled = false;
-    // Fjernet 2D/3D valg-logikk
+    let usePlayerImage = true;
+    
+    // Initialize arrays
+    let obstacles = [];
+    let collectibles = [];
+    let activePowerUps = [];
+    let powerUpEffects = []; // Array to store active power-up effects
+    let wheelTracks = [];
 
     // Road-linjer for bakgrunnen
     const roadLines = [];
@@ -63,39 +80,147 @@ document.addEventListener('DOMContentLoaded', () => {
       ctx.fillStyle = '#388E3C';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Tegn vei - nå fra topp til bunn
-      ctx.fillStyle = '#424242';
-      ctx.fillRect(leftEdge, 0, roadWidth, canvas.height);
+      // Apply drunk road distortion
+      if (isDrunk && drunkLevel > 0.2) {
+        // Draw distorted road - wavy effect based on drunk level
+        const distortionFrequency = 0.02;
+        const distortionAmplitude = roadDistortion;
+        const laneWidth = roadWidth / 3;
+        
+        // Adjust drawing
+        ctx.save();
+        
+        // Draw distorted road surface
+        ctx.fillStyle = '#424242';
+        ctx.beginPath();
+        
+        // Left edge with distortion
+        ctx.moveTo(leftEdge, 0);
+        for (let y = 0; y < canvas.height; y += 15) {
+          const distortion = Math.sin(y * distortionFrequency + frameCount * 0.05) * distortionAmplitude;
+          ctx.lineTo(leftEdge + distortion, y);
+        }
+        
+        // Right edge with distortion, offset phase for more realistic wave
+        ctx.lineTo(leftEdge + roadWidth + Math.sin(canvas.height * distortionFrequency + frameCount * 0.05 + 0.5) * distortionAmplitude, canvas.height);
+        for (let y = canvas.height; y > 0; y -= 15) {
+          const distortion = Math.sin(y * distortionFrequency + frameCount * 0.05 + 1) * distortionAmplitude;
+          ctx.lineTo(leftEdge + roadWidth + distortion, y);
+        }
+        
+        ctx.closePath();
+        ctx.fill();
+        
+        // Draw distorted sidewalks
+        ctx.fillStyle = '#BDBDBD';
+        
+        // Left sidewalk
+        ctx.beginPath();
+        ctx.moveTo(leftEdge - sidewalkWidth, 0);
+        for (let y = 0; y < canvas.height; y += 15) {
+          const distortion = Math.sin(y * distortionFrequency + frameCount * 0.05) * distortionAmplitude;
+          ctx.lineTo(leftEdge + distortion, y);
+        }
+        for (let y = canvas.height; y > 0; y -= 15) {
+          const distortion = Math.sin(y * distortionFrequency + frameCount * 0.05) * distortionAmplitude * 0.7;
+          ctx.lineTo(leftEdge - sidewalkWidth + distortion, y);
+        }
+        ctx.closePath();
+        ctx.fill();
+        
+        // Right sidewalk
+        ctx.beginPath();
+        ctx.moveTo(leftEdge + roadWidth + Math.sin(0 * distortionFrequency + frameCount * 0.05 + 1) * distortionAmplitude, 0);
+        for (let y = 0; y < canvas.height; y += 15) {
+          const distortion = Math.sin(y * distortionFrequency + frameCount * 0.05 + 1) * distortionAmplitude;
+          ctx.lineTo(leftEdge + roadWidth + distortion, y);
+        }
+        for (let y = canvas.height; y > 0; y -= 15) {
+          const distortion = Math.sin(y * distortionFrequency + frameCount * 0.05 + 1.2) * distortionAmplitude;
+          ctx.lineTo(leftEdge + roadWidth + sidewalkWidth + distortion, y);
+        }
+        ctx.lineTo(leftEdge + roadWidth + sidewalkWidth + Math.sin(0 * distortionFrequency + frameCount * 0.05 + 1.2) * distortionAmplitude, 0);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Draw wavy road dividing lines
+        ctx.fillStyle = '#FFFFFF';
+        const lineSpacing = 80;
+        const lineWidth = 10;
+        const lineHeight = 40;
+        
+        for (let y = frameCount % lineSpacing; y < canvas.height; y += lineSpacing) {
+          ctx.beginPath();
+          const xCenter = canvas.width / 2;
+          const distortion = Math.sin(y * distortionFrequency + frameCount * 0.05 + 0.5) * distortionAmplitude * 0.7;
+          ctx.fillRect(xCenter - lineWidth / 2 + distortion, y, lineWidth, lineHeight);
+        }
+        
+        // Draw distorted road boundaries
+        ctx.strokeStyle = '#FFEB3B';
+        ctx.lineWidth = 3;
+        
+        // Left boundary
+        ctx.beginPath();
+        for (let y = 0; y < canvas.height; y += 15) {
+          const distortion = Math.sin(y * distortionFrequency + frameCount * 0.05) * distortionAmplitude;
+          if (y === 0) {
+            ctx.moveTo(leftEdge + distortion, y);
+          } else {
+            ctx.lineTo(leftEdge + distortion, y);
+          }
+        }
+        ctx.stroke();
+        
+        // Right boundary
+        ctx.beginPath();
+        for (let y = 0; y < canvas.height; y += 15) {
+          const distortion = Math.sin(y * distortionFrequency + frameCount * 0.05 + 1) * distortionAmplitude;
+          if (y === 0) {
+            ctx.moveTo(leftEdge + roadWidth + distortion, y);
+          } else {
+            ctx.lineTo(leftEdge + roadWidth + distortion, y);
+          }
+        }
+        ctx.stroke();
+        
+        ctx.restore();
+      } else {
+        // Normal road rendering (no distortion)
+        // Tegn vei - nå fra topp til bunn
+        ctx.fillStyle = '#424242';
+        ctx.fillRect(leftEdge, 0, roadWidth, canvas.height);
 
-      // Tegn fortau - nå fra topp til bunn
-      ctx.fillStyle = '#BDBDBD';
-      ctx.fillRect(leftEdge - sidewalkWidth, 0, sidewalkWidth, canvas.height);
-      ctx.fillRect(leftEdge + roadWidth, 0, sidewalkWidth, canvas.height);
+        // Tegn fortau - nå fra topp til bunn
+        ctx.fillStyle = '#BDBDBD';
+        ctx.fillRect(leftEdge - sidewalkWidth, 0, sidewalkWidth, canvas.height);
+        ctx.fillRect(leftEdge + roadWidth, 0, sidewalkWidth, canvas.height);
 
-      // Tegn veilinjer
-      ctx.fillStyle = '#FFFFFF';
-      const lineSpacing = 80;
-      const lineWidth = 10;
-      const lineHeight = 40;
-      
-      // Tegn linjer fra topp til bunn
-      for (let y = frameCount % lineSpacing; y < canvas.height; y += lineSpacing) {
-        ctx.fillRect(canvas.width / 2 - lineWidth / 2, y, lineWidth, lineHeight);
+        // Tegn veilinjer
+        ctx.fillStyle = '#FFFFFF';
+        const lineSpacing = 80;
+        const lineWidth = 10;
+        const lineHeight = 40;
+        
+        // Tegn linjer fra topp til bunn
+        for (let y = frameCount % lineSpacing; y < canvas.height; y += lineSpacing) {
+          ctx.fillRect(canvas.width / 2 - lineWidth / 2, y, lineWidth, lineHeight);
+        }
+
+        // Tegn veigrensene med gule linjer
+        ctx.strokeStyle = '#FFEB3B';
+        ctx.lineWidth = 3;
+        
+        ctx.beginPath();
+        ctx.moveTo(leftEdge, 0);
+        ctx.lineTo(leftEdge, canvas.height);
+        ctx.stroke();
+        
+        ctx.beginPath();
+        ctx.moveTo(leftEdge + roadWidth, 0);
+        ctx.lineTo(leftEdge + roadWidth, canvas.height);
+        ctx.stroke();
       }
-
-      // Tegn veigrensene med gule linjer
-      ctx.strokeStyle = '#FFEB3B';
-      ctx.lineWidth = 3;
-      
-      ctx.beginPath();
-      ctx.moveTo(leftEdge, 0);
-      ctx.lineTo(leftEdge, canvas.height);
-      ctx.stroke();
-      
-      ctx.beginPath();
-      ctx.moveTo(leftEdge + roadWidth, 0);
-      ctx.lineTo(leftEdge + roadWidth, canvas.height);
-      ctx.stroke();
     }
 
     // Tegn veien
@@ -106,7 +231,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Last spillerbilde (scooter) med fallback
     const playerImage = new Image();
     playerImage.src = 'scooter.png';
-    let usePlayerImage = false;
+    usePlayerImage = false; // Changed from 'let usePlayerImage = false' to avoid redeclaration
     playerImage.onload = () => {
       usePlayerImage = true;
       console.log('Spillerbilde lastet.');
@@ -252,7 +377,7 @@ document.addEventListener('DOMContentLoaded', () => {
       y: canvas.height - 100,
       width: 50,
       height: 75,
-      speed: 7,
+      speed: 11, // Increased from 9 to 11 for faster response
       tilt: 0,
       targetTilt: 0,
       speedX: 0,
@@ -260,7 +385,15 @@ document.addEventListener('DOMContentLoaded', () => {
       draw() {
         ctx.save();
         ctx.translate(this.x, this.y);
-        ctx.rotate(this.tilt);
+        
+        // Apply drunk effect to drawing
+        if (isDrunk) {
+          const swayAmount = Math.sin(swayAngle) * (drunkLevel * 0.15);
+          ctx.rotate(this.tilt + swayAmount);
+        } else {
+          ctx.rotate(this.tilt);
+        }
+        
         ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
         ctx.shadowBlur = 5;
         ctx.shadowOffsetX = 3;
@@ -273,26 +406,97 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.restore();
       },
       update(keys) {
-        this.speedX *= 0.9;
-        this.speedY *= 0.9;
+        // Update drunk-related values
+        if (isDrunk && drunkLevel > 0) {
+          // Lower frequency updates for swayAngle to improve performance
+          if (frameCount % 2 === 0) {
+            swayAngle += 0.05;
+          }
+          
+          // Only recalculate vision blur periodically
+          if (frameCount % 5 === 0) {
+            visionBlur = 3 + Math.sin(Math.floor(frameCount * 0.03)) * 2 * drunkLevel;
+          }
+          
+          // Randomly change direction when drunk, intensity based on drunk level
+          // but with less frequent changes for better performance
+          randomDirectionTimer--;
+          if (randomDirectionTimer <= 0) {
+            lastRandomDirection = (Math.random() - 0.5) * drunkLevel * 2;
+            // Longer time between random direction changes for better performance
+            randomDirectionTimer = Math.floor(Math.random() * 80) + 50;
+          }
+        }
+          
+        // Faster deceleration for more responsive controls
+        this.speedX *= 0.85;
+        this.speedY *= 0.85;
+        
+        // Normal controls, but affected by drunkLevel
         if ((keys.ArrowLeft || keys.a) && this.x > this.width / 2) {
-          this.speedX -= 0.5;
+          this.speedX -= 0.8; // Increased from 0.5 for faster response
           this.targetTilt = -0.2;
+          
+          // Drunk effects make controls less responsive and more exaggerated
+          if (isDrunk && drunkLevel > 0) {
+            // Optimize random calculations - less frequent
+            if (frameCount % 2 === 0) {
+              this.speedX += (Math.random() - 0.7) * drunkLevel; // Random adjustments
+              this.targetTilt = -0.2 - Math.random() * drunkLevel * 0.2; // Exaggerated tilt
+            }
+          }
         }
         if ((keys.ArrowRight || keys.d) && this.x < canvas.width - this.width / 2) {
-          this.speedX += 0.5;
+          this.speedX += 0.8; // Increased from 0.5 for faster response
           this.targetTilt = 0.2;
+          
+          // Drunk effects for right movement
+          if (isDrunk && drunkLevel > 0) {
+            // Optimize random calculations - less frequent
+            if (frameCount % 2 === 0) {
+              this.speedX += (Math.random() - 0.3) * drunkLevel; // Random adjustments
+              this.targetTilt = 0.2 + Math.random() * drunkLevel * 0.2; // Exaggerated tilt
+            }
+          }
         }
         if (!(keys.ArrowLeft || keys.a || keys.ArrowRight || keys.d)) {
           this.targetTilt = 0;
         }
         if ((keys.ArrowUp || keys.w) && this.y > this.height / 2) {
-          this.speedY -= 0.5;
+          this.speedY -= 0.8; // Increased from 0.5 for faster response
+          
+          // Drunk effects for up movement
+          if (isDrunk && drunkLevel > 0) {
+            // Optimize random calculations - less frequent
+            if (frameCount % 2 === 0) {
+              this.speedY += (Math.random() - 0.7) * drunkLevel;
+              this.speedX += (Math.random() - 0.5) * drunkLevel * 0.5; // Weaving
+            }
+          }
         }
         if ((keys.ArrowDown || keys.s) && this.y < canvas.height - this.height / 2) {
-          this.speedY += 0.5;
+          this.speedY += 0.8; // Increased from 0.5 for faster response
+          
+          // Drunk effects for down movement
+          if (isDrunk && drunkLevel > 0) {
+            // Optimize random calculations - less frequent
+            if (frameCount % 2 === 0) {
+              this.speedY += (Math.random() - 0.3) * drunkLevel;
+              this.speedX += (Math.random() - 0.5) * drunkLevel * 0.5; // Weaving
+            }
+          }
         }
-        this.tilt += (this.targetTilt - this.tilt) * 0.1;
+        
+        // Apply random steering when drunk, even without input
+        if (isDrunk && drunkLevel > 0) {
+          // Apply random steering less frequently for better performance
+          if (frameCount % 2 === 0) {
+            this.speedX += lastRandomDirection * 0.2 * drunkLevel;
+            this.speedY += (Math.random() - 0.5) * drunkLevel * 0.3;
+          }
+        }
+        
+        this.tilt += (this.targetTilt - this.tilt) * (isDrunk && drunkLevel > 0.3 ? 0.05 : 0.1); // Slower tilt response when drunk
         this.speedX = Math.max(-this.speed, Math.min(this.speedX, this.speed));
         this.speedY = Math.max(-this.speed, Math.min(this.speedY, this.speed));
         this.x += this.speedX;
@@ -303,7 +507,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // Hindringer og hindringstyper
-    let obstacles = [];
     const obstacleTypes = [
       { name: 'car1', color: '#E53935', isCar: true },
       { name: 'car2', color: '#4CAF50', isCar: true },
@@ -635,10 +838,100 @@ document.addEventListener('DOMContentLoaded', () => {
             ctx.fillStyle = '#F44336';
             ctx.fillRect(this.x - this.width * 0.4, this.y + this.height * 0.4, this.width * 0.1, this.height * 0.05);
             ctx.fillRect(this.x + this.width * 0.3, this.y + this.height * 0.4, this.width * 0.1, this.height * 0.05);
+          } else if (this.type === 'cyclist') {
+            // Calculate lean based on steering or wobble
+            const leanAngle = (this.steeringDirection * 0.1) + (Math.sin(this.animationPhase) * this.wobbleAmount * 0.5);
+            
+            ctx.save();
+            ctx.rotate(leanAngle); // Apply lean effect
+            
+            // Draw the bicycle
+            ctx.fillStyle = '#111';
+            // Rear wheel
+            ctx.beginPath();
+            ctx.arc(-this.width * 0.3, this.height * 0.2, this.width * 0.15, 0, Math.PI * 2);
+            ctx.fill();
+            // Front wheel
+            ctx.beginPath();
+            ctx.arc(this.width * 0.3, this.height * 0.2, this.width * 0.15, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Bicycle frame
+            ctx.strokeStyle = this.color;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(-this.width * 0.3, this.height * 0.2); // Rear wheel center
+            ctx.lineTo(0, -this.height * 0.1); // Middle frame joint
+            ctx.lineTo(this.width * 0.3, this.height * 0.2); // Front wheel center
+            ctx.stroke();
+            
+            // Seat post and handlebar
+            ctx.beginPath();
+            ctx.moveTo(0, -this.height * 0.1); // Middle frame joint
+            ctx.lineTo(0, -this.height * 0.25); // Seat position
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(this.width * 0.15, -this.height * 0.05); // Handlebar bottom
+            ctx.lineTo(this.width * 0.15, -this.height * 0.25); // Handlebar top
+            ctx.stroke();
+            
+            // Cyclist body
+            // Head
+            ctx.fillStyle = '#FFCC80'; // Skin tone
+            ctx.beginPath();
+            ctx.arc(0, -this.height * 0.35, this.width * 0.12, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Helmet
+            ctx.fillStyle = '#E53935'; // Red helmet
+            ctx.beginPath();
+            ctx.arc(0, -this.height * 0.35, this.width * 0.14, Math.PI, 0);
+            ctx.fill();
+            
+            // Torso
+            ctx.fillStyle = '#2196F3'; // Blue jersey
+            ctx.beginPath();
+            ctx.moveTo(-this.width * 0.1, -this.height * 0.25); // Left shoulder
+            ctx.lineTo(this.width * 0.15, -this.height * 0.25); // Right shoulder
+            ctx.lineTo(this.width * 0.15, -this.height * 0.05); // Right hip
+            ctx.lineTo(0, -this.height * 0.1); // Bottom of torso
+            ctx.lineTo(-this.width * 0.1, -this.height * 0.25); // Back to left shoulder
+            ctx.fill();
+            
+            // Arms
+            ctx.strokeStyle = '#1976D2'; // Darker blue for arms
+            ctx.lineWidth = 4;
+            // Left arm to handlebar
+            ctx.beginPath();
+            ctx.moveTo(-this.width * 0.05, -this.height * 0.25); // Left shoulder
+            ctx.lineTo(this.width * 0.15, -this.height * 0.2); // Hand on handlebar
+            ctx.stroke();
+            
+            // Legs - animated with pedaling motion
+            ctx.strokeStyle = '#424242'; // Dark gray for legs
+            ctx.lineWidth = 4;
+            const pedalAngle = this.animationPhase * 2;
+            // First leg
+            ctx.beginPath();
+            ctx.moveTo(0, -this.height * 0.15); // Hip joint
+            ctx.lineTo(Math.cos(pedalAngle) * this.width * 0.15, 
+                      this.height * 0.1 + Math.sin(pedalAngle) * this.width * 0.1); // Pedal position
+            ctx.stroke();
+            
+            // Second leg, opposite phase
+            ctx.beginPath();
+            ctx.moveTo(0, -this.height * 0.15); // Hip joint
+            ctx.lineTo(Math.cos(pedalAngle + Math.PI) * this.width * 0.15, 
+                      this.height * 0.1 + Math.sin(pedalAngle + Math.PI) * this.width * 0.1); // Opposite pedal
+            ctx.stroke();
+            
+            ctx.restore(); // Restore after applying lean
           } else {
             ctx.fillStyle = this.color;
-            ctx.fillRect(this.x - this.width / 2, this.y - this.height / 2, this.width, this.height);
+            ctx.fillRect(-this.width / 2, -this.height / 2, this.width, this.height);
           }
+          
+          ctx.restore();
           this.animationPhase += 0.05;
         }
       };
@@ -719,9 +1012,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function checkCollision(player, obstacle) {
       // Skip collision check if player has shield
-      if (activePowerUps.some(p => p.type === 'shield')) return false;
+      if (activePowerUps.some(p => p.type === 'shield')) {
+        return false;
+      }
       
-      // More precise collision using rectangles instead of circles
       // Calculate player hitbox (slightly smaller than visual size)
       const playerHitbox = {
         x: player.x - player.width * 0.3,
@@ -730,8 +1024,9 @@ document.addEventListener('DOMContentLoaded', () => {
         height: player.height * 0.8
       };
       
-      // Calculate obstacle hitbox based on its type
+      // Calculate obstacle hitbox (varies by type)
       let obstacleHitbox;
+      
       if (obstacle.type === 'pedestrian') {
         obstacleHitbox = {
           x: obstacle.x - obstacle.width * 0.2,
@@ -761,12 +1056,28 @@ document.addEventListener('DOMContentLoaded', () => {
           height: obstacle.height * 0.8
         };
       }
-      
+
       // Check if rectangles overlap (AABB collision)
-      return playerHitbox.x < obstacleHitbox.x + obstacleHitbox.width &&
+      const collision = playerHitbox.x < obstacleHitbox.x + obstacleHitbox.width &&
              playerHitbox.x + playerHitbox.width > obstacleHitbox.x &&
              playerHitbox.y < obstacleHitbox.y + obstacleHitbox.height &&
              playerHitbox.y + playerHitbox.height > obstacleHitbox.y;
+      
+      if (collision) {
+        // Play appropriate crash sound
+        playSoundEffect('collision');
+        
+        // Play specific crash sound based on obstacle type
+        if (obstacle.isCar) {
+          playSoundEffect('carCrash');
+        } else if (obstacle.type === 'cyclist') {
+          playSoundEffect('cyclistCrash');
+        } else if (obstacle.type === 'pedestrian') {
+          playSoundEffect('pedestrianCrash');
+        }
+      }
+      
+      return collision;
     }
 
     function clearCanvas() {
@@ -816,6 +1127,96 @@ document.addEventListener('DOMContentLoaded', () => {
       ctx.restore();
     }
 
+    // Function to display temporary messages (moved outside gameLoop)
+    function showMessage(text, duration) {
+      const messageElem = document.createElement('div');
+      messageElem.classList.add('game-message');
+      messageElem.textContent = text;
+      messageElem.style.position = 'absolute';
+      messageElem.style.top = '20%';
+      messageElem.style.left = '50%';
+      messageElem.style.transform = 'translate(-50%, -50%)';
+      messageElem.style.color = '#ff5722';
+      messageElem.style.fontWeight = 'bold';
+      messageElem.style.fontSize = '20px';
+      messageElem.style.textShadow = '2px 2px 4px rgba(0,0,0,0.7)';
+      messageElem.style.zIndex = '100';
+      
+      document.body.appendChild(messageElem);
+      
+      // Fade out and remove
+      setTimeout(() => {
+        messageElem.style.transition = 'opacity 0.5s';
+        messageElem.style.opacity = '0';
+        setTimeout(() => messageElem.remove(), 500);
+      }, duration * 16); // Convert frames to milliseconds (approx)
+    }
+    
+    // Definere variabler for kamera og distortion-effekter
+    let cameraShake = 0;
+    let roadDistortion = 0;
+    let glitchIntensity = 0;
+    let lastGlitchTime = 0;
+    let isGlitching = false;
+    let glitchOffsetX = 0;
+    let glitchOffsetY = 0;
+
+    // Add screen "tug" and zoom effect that gets stronger with drunk level
+    function applyDrunkScreenEffects() {
+      if (!isDrunk || drunkLevel <= 0.1) return;
+      
+      // Calculate zoom effect based on drunk level
+      const zoomFactor = 1 + (Math.sin(frameCount * 0.02) * 0.05 * drunkLevel);
+      const zoomOffsetX = (canvas.width / 2) * (1 - zoomFactor);
+      const zoomOffsetY = (canvas.height / 2) * (1 - zoomFactor);
+      
+      // Increase zoom effect periodically for a "pulse" effect
+      if (drunkLevel > 0.3 && Math.random() < 0.01 * drunkLevel) {
+        // Apply stronger zoom effect
+        ctx.save();
+        const pulseZoom = 1 + (0.1 * drunkLevel);
+        ctx.translate(canvas.width / 2, canvas.height / 2);
+        ctx.scale(pulseZoom, pulseZoom);
+        ctx.translate(-canvas.width / 2, -canvas.height / 2);
+        
+        // Draw the road and objects
+        drawRoad();
+        
+        // Semi-transparent overlay
+        ctx.fillStyle = `rgba(255, 150, 50, ${0.1 * drunkLevel})`;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        ctx.restore();
+        return true; // Skip normal rendering
+      }
+      
+      // Apply zoom and translation for drunk effect
+      if (drunkLevel > 0.2) {
+        ctx.save();
+        ctx.translate(canvas.width / 2, canvas.height / 2);
+        ctx.scale(zoomFactor, zoomFactor);
+        ctx.translate(-canvas.width / 2 + Math.sin(frameCount * 0.01) * 5 * drunkLevel, 
+                      -canvas.height / 2 + Math.sin(frameCount * 0.02) * 3 * drunkLevel);
+        
+        // Apply more intense effects at higher drunk levels
+        if (drunkLevel > 0.6 && frameCount % 90 < 2) {
+          // Strong pulsing glitch effect
+          ctx.scale(1 + Math.random() * 0.1, 1 + Math.random() * 0.05);
+          
+          // RGB shift effect
+          if (frameCount % 90 === 0) {
+            ctx.drawImage(canvas, Math.random() * 5 * drunkLevel, 0);
+            ctx.globalCompositeOperation = 'lighten';
+            ctx.drawImage(canvas, -Math.random() * 8 * drunkLevel, 0);
+          }
+        }
+        
+        return false; // Continue with normal rendering, just keep the context transformation
+      }
+      
+      return false;
+    }
+
     function gameLoop() {
       if (!gameRunning) return;
       
@@ -829,14 +1230,171 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
       }
       
+      // Gradually increase drunk level based on score milestones
+      if (isDrunk && drunkLevel < 0.8) {
+        // Check if we've passed a new score milestone (every 5 points)
+        const currentScoreThreshold = Math.floor(score / 5) * 5;
+        
+        // If we've reached a new score threshold (5, 10, 15, etc.)
+        if (currentScoreThreshold > lastScoreThreshold && score >= 5) {
+          // Update the last threshold we passed
+          lastScoreThreshold = currentScoreThreshold;
+          
+          // Increase drunk level
+          const increment = 0.1;
+          const oldLevel = drunkLevel;
+          drunkLevel += increment;
+          
+          // Cap at maximum drunk level
+          drunkLevel = Math.min(0.8, drunkLevel);
+          
+          // Play drunk level up sound
+          playSoundEffect('drunkLevel');
+          
+          // Show message about increasing drunkenness
+          if (drunkLevel > 0.1) {
+            showMessage("Beruselsen øker! 🍺", 60);
+            
+            // Add dramatic effect when drunk level increases
+            // Flash effect
+            const flashOverlay = document.createElement('div');
+            flashOverlay.style.position = 'absolute';
+            flashOverlay.style.top = '0';
+            flashOverlay.style.left = '0';
+            flashOverlay.style.width = '100%';
+            flashOverlay.style.height = '100%';
+            flashOverlay.style.backgroundColor = 'rgba(255, 200, 100, 0.3)';
+            flashOverlay.style.pointerEvents = 'none';
+            flashOverlay.style.zIndex = '1000';
+            flashOverlay.style.transition = 'opacity 0.5s';
+            
+            document.body.appendChild(flashOverlay);
+            
+            setTimeout(() => {
+              flashOverlay.style.opacity = '0';
+              setTimeout(() => flashOverlay.remove(), 500);
+            }, 300);
+            
+            // Add a camera shake effect
+            cameraShake = 5 * drunkLevel;
+          }
+          
+          console.log(`Drunk level increased to ${drunkLevel.toFixed(2)} at score ${score}`);
+        }
+      }
+      
+      // Apply drunk vision effects - simplified for better performance
+      if (isDrunk && drunkLevel > 0.1) {
+        // Apply screen zoom and distortion effects
+        const skipNormalRendering = applyDrunkScreenEffects();
+        if (skipNormalRendering) {
+          // If we already rendered, just apply the rest of the game logic
+          // but skip re-rendering the background
+          player.update(keys);
+          player.draw();
+          
+          // Update score
+          animationId = requestAnimationFrame(gameLoop);
+          return;
+        }
+        
+        // Only apply visual effects when drunk level is significant
+        // No blur filter - it's too performance intensive
+        // ctx.filter = `blur(${Math.min(2, visionBlur * drunkLevel)}px)`;
+        
+        // Simpler overlay effect 
+        ctx.fillStyle = `rgba(255, 230, 150, ${drunkLevel * 0.08})`;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Double vision with less intensity - only for higher drunk levels
+        if (drunkLevel > 0.4) {
+          const doubleVisionOffset = Math.sin(Math.floor(frameCount * 0.02)) * drunkLevel * 2;
+          ctx.save();
+          ctx.globalAlpha = 0.15 * drunkLevel;
+          ctx.translate(doubleVisionOffset, 0);
+        }
+        
+        // Apply camera shake effect based on drunk level
+        if (cameraShakeEnabled && drunkLevel > 0.2) {
+          // Calculate shake intensity based on drunk level
+          const baseShakeIntensity = drunkLevel * 2.5;
+          
+          // Add random shake offset
+          const shakeX = (Math.random() - 0.5) * baseShakeIntensity;
+          const shakeY = (Math.random() - 0.5) * baseShakeIntensity;
+          
+          // Apply the shake to the canvas
+          ctx.translate(shakeX, shakeY);
+          
+          // Gradually reduce camera shake intensity
+          cameraShake *= 0.95;
+        }
+        
+        // Random glitch effects at higher drunk levels
+        if (drunkLevel > 0.5 && Math.random() < drunkLevel * 0.03) {
+          isGlitching = true;
+          lastGlitchTime = frameCount;
+          glitchIntensity = Math.random() * drunkLevel * 2;
+          glitchOffsetX = (Math.random() - 0.5) * glitchIntensity * 20;
+          glitchOffsetY = (Math.random() - 0.5) * glitchIntensity * 10;
+        }
+        
+        // Apply active glitch effect
+        if (isGlitching && frameCount - lastGlitchTime < 5) {
+          ctx.save();
+          ctx.globalCompositeOperation = 'difference';
+          ctx.drawImage(canvas, glitchOffsetX, glitchOffsetY);
+          ctx.restore();
+          
+          // Occasionally add color channel offset
+          if (Math.random() < 0.3) {
+            ctx.save();
+            ctx.globalCompositeOperation = 'screen';
+            ctx.fillStyle = 'rgba(255, 0, 0, 0.1)';
+            ctx.fillRect(glitchOffsetX, 0, canvas.width, canvas.height);
+            ctx.restore();
+          }
+        } else {
+          isGlitching = false;
+        }
+      }
+      
+      // Apply road distortion based on drunk level
+      roadDistortion = drunkLevel * 40;
+      
       drawRoad();
-      drawWeatherEffects();
+      
+      // Make the screen edges wavy when drunk - intensity based on drunk level
+      // Only for higher drunk levels and reduced complexity
+      if (drunkLevel > 0.4 && frameCount % 3 === 0) { // Only render every 3rd frame
+        ctx.save();
+        ctx.strokeStyle = `rgba(255, 220, 150, ${drunkLevel * 0.15})`;
+        ctx.lineWidth = 10 * drunkLevel;
+        ctx.beginPath();
+        // Reduced number of points for the wave
+        for (let i = 0; i < canvas.width; i += 40) { // Increased step size from 40 to 60
+          const waveHeight = Math.sin(i * 0.05 + Math.floor(frameCount * 0.03)) * 8 * drunkLevel;
+          if (i === 0) {
+            ctx.moveTo(i, waveHeight);
+          } else {
+            ctx.lineTo(i, waveHeight);
+          }
+        }
+        ctx.stroke();
+        ctx.restore();
+      }
+      
+      // Draw wheel tracks (before the player) - limited for performance
+      if (frameCount % 4 === 0 && Math.abs(player.speedX) > 4) { // Only draw every 4th frame when moving fast
+        drawWheelTracks();
+      }
+      
       frameCount++;
       if (frameCount % obstacleFrequency === 0) {
         obstacles.push(createObstacle());
         if (frameCount % 500 === 0) {
-          obstacleSpeed += 0.3;
-          if (obstacleFrequency > 40) obstacleFrequency -= 3;
+          obstacleSpeed += 0.5; // Increased speed increment
+          if (obstacleFrequency > 30) obstacleFrequency -= 5; // Spawn obstacles faster
         }
       }
       if (frameCount % 200 === 0 && obstacles.length < 8) {
@@ -878,6 +1436,8 @@ document.addEventListener('DOMContentLoaded', () => {
           ctx.stroke();
         }
       }
+      
+      // Process obstacles with optimized collision detection
       for (let i = obstacles.length - 1; i >= 0; i--) {
         const obstacle = obstacles[i];
         const isOffScreen = obstacle.update();
@@ -930,6 +1490,8 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         }
       }
+      
+      // Process collectibles
       for (let i = collectibles.length - 1; i >= 0; i--) {
         const collectible = collectibles[i];
         const isOffScreen = collectible.update();
@@ -955,7 +1517,82 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         }
       }
+      
       applyPowerUps();
+      
+      // Process and draw power-up effects
+      for (let i = powerUpEffects.length - 1; i >= 0; i--) {
+        const effect = powerUpEffects[i];
+        const active = effect.update();
+        if (active) {
+          effect.draw();
+        } else {
+          powerUpEffects.splice(i, 1);
+        }
+      }
+      
+      // Create continuous effects for active power-ups (at a lower frequency)
+      if (frameCount % 30 === 0) { // Every half second
+        for (const powerUp of activePowerUps) {
+          // Don't create too many effects
+          if (powerUpEffects.length < 10) {
+            // Create a smaller continuous effect
+            const continuousEffect = createPowerUpEffect(powerUp.type, powerUp.color, true);
+            powerUpEffects.push(continuousEffect);
+          }
+        }
+      }
+      
+      // Reset drunk vision effects
+      if (isDrunk && drunkLevel > 0.1) {
+        ctx.restore();
+        ctx.filter = 'none';
+      
+        // Draw drunk indicator with different messages based on level
+        ctx.save();
+        ctx.fillStyle = 'rgba(255, 100, 50, 0.7)';
+        ctx.font = 'bold 16px Arial';
+        ctx.textAlign = 'left';
+        
+        // Different messages based on drunk level
+        let drunkMessage = '';
+        if (drunkLevel >= 0.7) {
+          drunkMessage = '🍺🍺🍺 DRITINGS!';
+        } else if (drunkLevel >= 0.5) {
+          drunkMessage = '🍺🍺 PÅ EN SNURR!';
+        } else if (drunkLevel >= 0.3) {
+          drunkMessage = '🍺🍺 BRISEN!';
+        } else if (drunkLevel >= 0.1) {
+          drunkMessage = '🍺 LETTERE PÅVIRKET';
+        }
+        
+        // Only show message if there is one
+        if (drunkMessage) {
+          ctx.fillText(drunkMessage, 10, canvas.height - 20);
+          
+          // Draw drunk meter
+          const meterWidth = 100;
+          const meterHeight = 10;
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+          ctx.fillRect(150, canvas.height - 25, meterWidth, meterHeight);
+          
+          // Meter color varies with drunk level
+          let meterColor;
+          if (drunkLevel >= 0.7) {
+            meterColor = 'rgba(255, 0, 0, 0.8)'; // Red for very drunk
+          } else if (drunkLevel >= 0.4) {
+            meterColor = 'rgba(255, 100, 0, 0.8)'; // Orange for moderately drunk
+          } else {
+            meterColor = 'rgba(255, 200, 0, 0.8)'; // Yellow for lightly drunk
+          }
+          
+          ctx.fillStyle = meterColor;
+          ctx.fillRect(150, canvas.height - 25, meterWidth * drunkLevel, meterHeight);
+        }
+        
+        ctx.restore();
+      }
+      
       animationId = requestAnimationFrame(gameLoop);
     }
 
@@ -1482,20 +2119,40 @@ document.addEventListener('DOMContentLoaded', () => {
       ctx.resetTransform ? ctx.resetTransform() : ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
+      // Play game start sound
+      playSoundEffect('gameStart');
+      
+      // Start the scooter engine sound
+      playSoundEffect('scooterEngine');
+      
       gameRunning = true;
       gameOver = false;
       score = 0;
       obstacles = [];
       collectibles = [];
       activePowerUps = [];
+      powerUpEffects = []; // Reset power-up effects array
       frameCount = 0;
-      obstacleSpeed = 5;
-      obstacleFrequency = 100;
+      obstacleSpeed = 7; // Increased from 5 to 7
+      obstacleFrequency = 80; // Reduced from 100 to 80
       player.x = canvas.width / 2;
       player.y = canvas.height - 100;
       player.tilt = 0;
       player.speedX = 0;
       player.speedY = 0;
+      
+      // Reset drunk driving variables - start completely sober
+      isDrunk = true; // Keep this true to enable the gradual system
+      drunkLevel = 0; // Start at 0 (completely sober)
+      swayAngle = 0;
+      visionBlur = 0;
+      lastRandomDirection = 0;
+      randomDirectionTimer = 0;
+      lastScoreThreshold = 0; // Reset score threshold tracker
+      
+      // Empty wheel tracks array for performance
+      wheelTracks = [];
+      
       activePowerUps.push({
         type: 'shield',
         timeLeft: 180,
@@ -1508,31 +2165,106 @@ document.addEventListener('DOMContentLoaded', () => {
       restartBtn.style.display = 'none';
       initRoadLines();
       initEnvironment();
-      const gameOverElem = document.querySelector('.game-over');
-      if (gameOverElem) {
-        gameOverElem.remove();
+      gameLoop();
+    }
+    
+    // Drunk wheel tracks
+    // wheelTracks array already declared earlier
+    
+    function addWheelTrack(x, y) {
+      wheelTracks.push({
+        x: x,
+        y: y,
+        alpha: 0.5,
+        width: 3
+      });
+      
+      // Limit the number of tracks
+      if (wheelTracks.length > 20) {
+        wheelTracks.shift();
       }
-      animationId = requestAnimationFrame(gameLoop);
+    }
+    
+    function drawWheelTracks() {
+      // Only draw tracks if player is moving fast enough
+      if (Math.abs(player.speedX) > 3 || Math.abs(player.speedY) > 3) {
+        // Add new track at current position (less frequently)
+        if (frameCount % 8 === 0) {
+          const offsetX = player.width * 0.2;
+          
+          // Left wheel track
+          addWheelTrack(
+            player.x - offsetX + (isDrunk && drunkLevel > 0.3 ? (Math.random() - 0.5) * drunkLevel * 8 : 0),
+            player.y + player.height * 0.3
+          );
+          
+          // Right wheel track
+          addWheelTrack(
+            player.x + offsetX + (isDrunk && drunkLevel > 0.3 ? (Math.random() - 0.5) * drunkLevel * 8 : 0),
+            player.y + player.height * 0.3
+          );
+        }
+      }
+      
+      // Optimize - limit how many tracks we process at once
+      const maxTracksToProcess = Math.min(10, wheelTracks.length);
+      
+      // Draw tracks more efficiently
+      ctx.save();
+      ctx.fillStyle = 'rgba(100, 100, 100, 0.4)';
+      
+      for (let i = wheelTracks.length - 1; i >= Math.max(0, wheelTracks.length - maxTracksToProcess); i--) {
+        const track = wheelTracks[i];
+        track.alpha -= 0.03; // Fade out faster
+        
+        if (track.alpha <= 0) {
+          wheelTracks.splice(i, 1);
+        } else {
+          // Batch similar tracks together
+          ctx.beginPath();
+          ctx.arc(track.x, track.y, track.width, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      ctx.restore();
+      
+      // Limit total tracks more aggressively
+      if (wheelTracks.length > 15) {
+        wheelTracks = wheelTracks.slice(-15);
+      }
     }
 
     function endGame() {
       gameRunning = false;
       gameOver = true;
-      cancelAnimationFrame(animationId);
       
-      // Reset transform to prevent zoom issues
-      ctx.resetTransform ? ctx.resetTransform() : ctx.setTransform(1, 0, 0, 1, 0, 0);
+      // Stop engine sound
+      playSoundEffect('stopEngine');
+      
+      // Play game over sound
+      playSoundEffect('gameOver');
+      
+      const gameOverDiv = document.createElement('div');
+      gameOverDiv.className = 'game-over';
+      
+      const heading = document.createElement('h2');
+      heading.textContent = 'GAME OVER!';
+      
+      const scoreInfo = document.createElement('p');
+      scoreInfo.textContent = `Poengsum: ${score}`;
+      
+      const safetyTip = document.createElement('p');
+      safetyTip.className = 'safety-tip';
+      safetyTip.textContent = getRandomSafetyTip();
+      
+      gameOverDiv.appendChild(heading);
+      gameOverDiv.appendChild(scoreInfo);
+      gameOverDiv.appendChild(safetyTip);
+      
+      const container = document.querySelector('.game-container');
+      container.appendChild(gameOverDiv);
       
       restartBtn.style.display = 'block';
-      const randomTip = safetyTips[Math.floor(Math.random() * safetyTips.length)];
-      const gameOverElem = document.createElement('div');
-      gameOverElem.classList.add('game-over');
-      gameOverElem.innerHTML = `
-        <h2>GAME OVER!</h2>
-        <p>Din poengsum: ${score}</p>
-        <p class="safety-tip">${randomTip}</p>
-      `;
-      canvas.parentNode.appendChild(gameOverElem);
     }
 
     startBtn.addEventListener('click', startGame);
@@ -1578,14 +2310,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     initEmptyEnvironment();
 
-    let collectibles = [];
+    collectibles = [];
     let powerUpTypes = [
       { name: 'shield', color: '#64B5F6', duration: 350, icon: '🛡️' },
       { name: 'speed', color: '#FFD54F', duration: 250, icon: '⚡' },
-      { name: 'slowTime', color: '#81C784', duration: 300, icon: '⏱️' },
+      { name: 'slowTime', color: '#9C27B0', duration: 180, icon: '⏱️' },
       { name: 'points', color: '#E91E63', duration: 1, icon: '💯' }
     ];
-    let activePowerUps = [];
+    activePowerUps = [];
 
     function initEnvironment() {
       clouds = [];
@@ -1652,6 +2384,14 @@ document.addEventListener('DOMContentLoaded', () => {
         icon: collectible.icon
       };
       
+      // Play sound effect
+      playSoundEffect('powerup');
+      
+      // Also play a specific sound for the power-up type
+      if (sounds[collectible.type]) {
+        playSoundEffect(collectible.type);
+      }
+      
       // Apply power up effects
       if (collectible.type === 'shield') {
         // Shield is already applied by presence in activePowerUps
@@ -1664,6 +2404,8 @@ document.addEventListener('DOMContentLoaded', () => {
       } else if (collectible.type === 'points') {
         score += 10;
         scoreDisplay.textContent = score;
+        // Create an effect even for points
+        powerUpEffects.push(createPowerUpEffect(collectible.type, collectible.color));
         return; // Don't add to active power-ups since it's instant
       }
       
@@ -1678,6 +2420,9 @@ document.addEventListener('DOMContentLoaded', () => {
           // Add new power-up
           activePowerUps.push(powerUp);
         }
+        
+        // Create the particle effect for the collected power-up
+        powerUpEffects.push(createPowerUpEffect(collectible.type, collectible.color));
       }
       
       // Visual feedback
@@ -1918,6 +2663,246 @@ document.addEventListener('DOMContentLoaded', () => {
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       
       ctx.restore();
+    }
+
+    // Create power-up animation particles around the player
+    function createPowerUpEffect(type, color, isSmall = false) {
+      const particles = [];
+      const particleCount = isSmall ? 8 : 20; // Fewer particles for continuous effects
+      
+      // Generate particles in a circular pattern around the player
+      for (let i = 0; i < particleCount; i++) {
+        const angle = (i / particleCount) * Math.PI * 2;
+        const distance = isSmall ? (20 + Math.random() * 5) : (30 + Math.random() * 10);
+        const particle = {
+          x: player.x + Math.cos(angle) * distance,
+          y: player.y + Math.sin(angle) * distance,
+          size: isSmall ? (3 + Math.random() * 3) : (5 + Math.random() * 5),
+          alpha: 1,
+          speed: isSmall ? (0.3 + Math.random() * 0.5) : (0.5 + Math.random() * 1),
+          angle: angle,
+          rotation: Math.random() * Math.PI * 2,
+          rotationSpeed: (Math.random() - 0.5) * 0.2,
+          color: color,
+          type: type,
+          life: isSmall ? (20 + Math.random() * 20) : (30 + Math.random() * 30)
+        };
+        particles.push(particle);
+      }
+      
+      return {
+        particles,
+        active: true,
+        update() {
+          let stillActive = false;
+          
+          for (const particle of this.particles) {
+            if (particle.life > 0) {
+              stillActive = true;
+              
+              // Move particles outward
+              particle.x += Math.cos(particle.angle) * particle.speed;
+              particle.y += Math.sin(particle.angle) * particle.speed;
+              
+              // Rotate particles
+              particle.rotation += particle.rotationSpeed;
+              
+              // Reduce life and alpha
+              particle.life -= 1;
+              particle.alpha = particle.life / (isSmall ? 40 : 60);
+              
+              // Grow particle slightly then shrink
+              if (particle.life > (isSmall ? 30 : 40)) {
+                particle.size += 0.1;
+              } else {
+                particle.size *= 0.95;
+              }
+            }
+          }
+          
+          this.active = stillActive;
+          return this.active;
+        },
+        draw() {
+          ctx.save();
+          
+          for (const particle of this.particles) {
+            if (particle.life <= 0) continue;
+            
+            ctx.save();
+            ctx.globalAlpha = particle.alpha;
+            ctx.translate(particle.x, particle.y);
+            ctx.rotate(particle.rotation);
+            
+            // Draw different shapes based on power-up type
+            ctx.fillStyle = particle.color;
+            
+            if (particle.type === 'shield') {
+              // Shield particles are small shields
+              ctx.beginPath();
+              ctx.arc(0, 0, particle.size / 2, 0, Math.PI, true);
+              ctx.lineTo(-particle.size / 2, 0);
+              ctx.lineTo(particle.size / 2, 0);
+              ctx.fill();
+            } else if (particle.type === 'speed') {
+              // Speed particles are lightning bolts
+              ctx.beginPath();
+              ctx.moveTo(0, -particle.size / 2);
+              ctx.lineTo(particle.size / 3, 0);
+              ctx.lineTo(0, particle.size / 2);
+              ctx.lineTo(-particle.size / 3, 0);
+              ctx.closePath();
+              ctx.fill();
+            } else if (particle.type === 'slowTime') {
+              // SlowTime particles are clock-like
+              ctx.beginPath();
+              ctx.arc(0, 0, particle.size / 2, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.strokeStyle = '#fff';
+              ctx.lineWidth = 1;
+              ctx.beginPath();
+              ctx.moveTo(0, 0);
+              ctx.lineTo(0, -particle.size / 3);
+              ctx.stroke();
+            } else {
+              // Default particles are stars
+              ctx.beginPath();
+              for (let i = 0; i < 5; i++) {
+                const angle = (i * Math.PI * 2) / 5 - Math.PI / 2;
+                const length = i % 2 === 0 ? particle.size / 2 : particle.size / 4;
+                const x = Math.cos(angle) * length;
+                const y = Math.sin(angle) * length;
+                
+                if (i === 0) {
+                  ctx.moveTo(x, y);
+                } else {
+                  ctx.lineTo(x, y);
+                }
+              }
+              ctx.closePath();
+              ctx.fill();
+            }
+            
+            ctx.restore();
+          }
+          
+          ctx.restore();
+        }
+      };
+    }
+    
+    // Array to store active power-up effects
+    powerUpEffects = [];
+
+    // Initialize sound effects
+    let soundEnabled = true;
+    const sounds = {
+      collision: new Audio('sounds/crash.mp3'),
+      carCrash: new Audio('sounds/car_crash.mp3'),
+      cyclistCrash: new Audio('sounds/cyclist_crash.mp3'),
+      pedestrianCrash: new Audio('sounds/pedestrian_crash.mp3'),
+      powerup: new Audio('sounds/powerup.mp3'),
+      shield: new Audio('sounds/shield.mp3'),
+      speed: new Audio('sounds/speed.mp3'),
+      slowTime: new Audio('sounds/slow_time.mp3'),
+      points: new Audio('sounds/points.mp3'),
+      gameStart: new Audio('sounds/game_start.mp3'),
+      gameOver: new Audio('sounds/game_over.mp3'),
+      scooterEngine: new Audio('sounds/scooter_engine.mp3'),
+      drunkLevel: new Audio('sounds/drunk_level_up.mp3')
+    };
+
+    // For sounds that might overlap, we need to handle them specially
+    let engineSound = null;
+    let engineSoundPlaying = false;
+
+    // Function to play sound effects
+    function playSoundEffect(soundName) {
+      if (!soundEnabled) return;
+      
+      // Handle looping engine sound differently
+      if (soundName === 'scooterEngine') {
+        if (!engineSoundPlaying) {
+          engineSound = sounds.scooterEngine.cloneNode();
+          engineSound.loop = true;
+          engineSound.volume = 0.4;
+          engineSound.play().catch(e => console.warn('Could not play engine sound:', e));
+          engineSoundPlaying = true;
+        }
+        return;
+      }
+      
+      // Stop engine sound if requested
+      if (soundName === 'stopEngine' && engineSoundPlaying) {
+        if (engineSound) {
+          engineSound.pause();
+          engineSound = null;
+        }
+        engineSoundPlaying = false;
+        return;
+      }
+      
+      // For other sounds, clone the audio element to allow overlapping sounds
+      if (sounds[soundName]) {
+        const sound = sounds[soundName].cloneNode();
+        
+        // Set appropriate volume based on sound type
+        if (soundName.includes('Crash') || soundName === 'collision') {
+          sound.volume = 0.8;
+        } else if (soundName === 'gameOver') {
+          sound.volume = 0.9;
+        } else {
+          sound.volume = 0.6;
+        }
+        
+        sound.play().catch(e => console.warn(`Could not play ${soundName} sound:`, e));
+      }
+    }
+
+    // Toggle sound function
+    function toggleSound() {
+      soundEnabled = !soundEnabled;
+      
+      if (!soundEnabled && engineSoundPlaying) {
+        playSoundEffect('stopEngine');
+      } else if (soundEnabled && gameRunning) {
+        playSoundEffect('scooterEngine');
+      }
+      
+      // Update UI indicator if it exists
+      const soundToggle = document.getElementById('soundToggle');
+      if (soundToggle) {
+        soundToggle.textContent = soundEnabled ? '🔊' : '🔇';
+      }
+    }
+
+    function getRandomSafetyTip() {
+      const safetyTips = [
+        "Husk hjelm når du kjører sparkesykkel!",
+        "Ikke kjør sparkesykkel i påvirket tilstand.",
+        "Følg trafikkreglene og vis hensyn til andre.",
+        "Hold lav fart på fortau og i gågater.",
+        "Bruk refleks og lys i mørket!",
+        "Vær ekstra forsiktig i regn og på vått underlag.",
+        "Sjekk bremsene før du starter turen.",
+        "Ikke kjør med flere på sparkesykkelen.",
+        "Se opp for fotgjengere - de har førsterett på fortauet!",
+        "Parker sparkesykkelen ansvarlig så den ikke er i veien."
+      ];
+
+      // If drunk, always show the drunk driving warning
+      if (isDrunk && drunkLevel > 0.1) {
+        return "Å kjøre sparkesykkel i påvirket tilstand er farlig og ulovlig! Ikke gjør det i virkeligheten.";
+      } else {
+        return safetyTips[Math.floor(Math.random() * safetyTips.length)];
+      }
+    }
+
+    // Initialize sound toggle button
+    if (soundToggle) {
+      soundToggle.addEventListener('click', () => {
+        toggleSound();
+      });
     }
   } catch (error) {
     console.error('Game initialization error:', error);
