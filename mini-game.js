@@ -43,6 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let controlReduction = 1; // Faktor for redusert kontroll
     let newHighScore = false; // Om det er oppnådd ny rekord
     let highScoreAnimationTimer = 0; // Timer for high score-animasjon
+    let glitchIntensity = 0; // Intensitet på glitcheffekter basert på score
     
     // Kommentarer ved omstart av spillet
     const restartComments = [
@@ -133,30 +134,30 @@ document.addEventListener('DOMContentLoaded', () => {
       return array[Math.floor(Math.random() * array.length)];
     }
     
-    // Vanskelighetsgrader parametere
+    // Vanskelighetsgrader parametere - øker frekvensen av hindringer
     const difficultySettings = {
       easy: {
         obstacleSpeed: 3,
-        obstacleFrequency: 0.01,
+        obstacleFrequency: 0.02,  // Doblet fra 0.01
         collectibleFrequency: 0.005,
         playerSpeed: 12,
-        maxObstacles: 5,
+        maxObstacles: 8,  // Økt fra 5
         scoreMultiplier: 1
       },
       medium: {
         obstacleSpeed: 5,
-        obstacleFrequency: 0.02,
+        obstacleFrequency: 0.035,  // Nesten doblet fra 0.02
         collectibleFrequency: 0.008,
         playerSpeed: 15,
-        maxObstacles: 10,
+        maxObstacles: 15,  // Økt fra 10
         scoreMultiplier: 2
       },
       hard: {
         obstacleSpeed: 7,
-        obstacleFrequency: 0.04,
+        obstacleFrequency: 0.06,  // Økt fra 0.04
         collectibleFrequency: 0.01,
         playerSpeed: 18,
-        maxObstacles: 15,
+        maxObstacles: 20,  // Økt fra 15
         scoreMultiplier: 3
       }
     };
@@ -164,6 +165,84 @@ document.addEventListener('DOMContentLoaded', () => {
     // Hent aktive innstillinger basert på vanskelighetsgrad
     function getSettings() {
       return difficultySettings[difficulty];
+    }
+    
+    // Beregn intensitet av visuelle effekter basert på score
+    function calculateEffectIntensity() {
+      // Base glitcheffekter på score - Gjør dem mer aggressive
+      if (score < 30) {
+        glitchIntensity = 0; // Ingen effekt ved lav score
+      } else if (score < 70) {
+        glitchIntensity = 2; // Sterkere mild effekt
+      } else if (score < 150) {
+        glitchIntensity = 3; // Sterkere moderat effekt
+      } else if (score < 250) {
+        glitchIntensity = 4; // Sterk effekt tidligere
+      } else {
+        glitchIntensity = 5; // Enda mer ekstrem effekt
+      }
+      
+      // Hvis spiller er full (har drukket), øk effekten ytterligere
+      if (drinkBarFull) {
+        glitchIntensity += 3; // Øker fra 2 til 3
+      }
+      
+      return glitchIntensity;
+    }
+    
+    // Funksjon for å lage glitcheffekter
+    function applyGlitchEffects() {
+      const intensity = calculateEffectIntensity();
+      
+      if (intensity === 0) return; // Ingen effekt ved lav score
+      
+      // Glitch-effekt 1: Fargeforskyvning - mer aggressiv
+      if (intensity >= 1 && Math.random() < 0.08 * intensity) { // Økt sannsynlighet
+        ctx.save();
+        // Lag flere lag med farger
+        ctx.globalCompositeOperation = 'difference';
+        ctx.drawImage(canvas, 
+          Math.random() * intensity * 8 - intensity * 4, // Økt forskyvning
+          Math.random() * intensity * 8 - intensity * 4, 
+          canvas.width, canvas.height);
+        ctx.restore();
+      }
+      
+      // Glitch-effekt 2: Linjeforskyvning - mer aggressiv
+      if (intensity >= 2 && Math.random() < 0.05 * intensity) { // Økt sannsynlighet
+        const numGlitches = Math.floor(Math.random() * intensity * 3) + 2; // Flere glitcher
+        
+        for (let i = 0; i < numGlitches; i++) {
+          const y = Math.floor(Math.random() * canvas.height);
+          const height = Math.floor(Math.random() * (15 * intensity)) + 5; // Tykkere linjer
+          const offsetX = (Math.random() * intensity * 15) - (intensity * 7.5); // Større offset
+          
+          // Lagre delen av canvas vi skal flytte
+          const imageData = ctx.getImageData(0, y, canvas.width, height);
+          // Fjern den originale linjen
+          ctx.clearRect(0, y, canvas.width, height);
+          // Tegn linjen på ny posisjon
+          ctx.putImageData(imageData, offsetX, y);
+        }
+      }
+      
+      // Glitch-effekt 3: Dobbeltsyn - mer aggressiv
+      if (intensity >= 2 && Math.random() < 0.15) { // Begynner tidligere og mer sannsynlig
+        ctx.save();
+        ctx.globalAlpha = 0.4; // Mer synlig
+        ctx.drawImage(canvas, intensity * 7, 0, canvas.width, canvas.height); // Større offset
+        ctx.drawImage(canvas, -intensity * 7, 0, canvas.width, canvas.height);
+        ctx.restore();
+      }
+      
+      // Ny Glitch-effekt 4: Farge-inversjon
+      if (intensity >= 3 && Math.random() < 0.03 * intensity) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'exclusion';
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.restore();
+      }
     }
     
     // Spiller-objekt
@@ -174,21 +253,40 @@ document.addEventListener('DOMContentLoaded', () => {
       height: 70,
       speed: 10,
       draw() {
-        // Endre farge hvis uovervinnelig
+        // Endre farge basert på tilstand
         if (invincible) {
-          ctx.fillStyle = '#4CAF50'; // Grønn farge når uovervinnelig
+          // Uovervinnelig
+          ctx.fillStyle = '#4CAF50'; // Grønn farge
           
-          // Tegn en glødende effekt rundt spilleren
-          const glowRadius = 10;
+          // Glødende effekt rundt spilleren
           ctx.shadowColor = '#4CAF50';
           ctx.shadowBlur = 15;
           ctx.shadowOffsetX = 0;
           ctx.shadowOffsetY = 0;
+        } else if (score > 150) {
+          // Høy score, legg til visuelle effekter
+          const pulseAmount = Math.sin(Date.now() / 300) * 0.5 + 0.5;
+          const redIntensity = Math.min(255, 150 + score / 5);
+          const greenIntensity = Math.max(0, 150 - score / 10);
+          
+          ctx.fillStyle = `rgb(${redIntensity}, ${greenIntensity}, 0)`;
+          
+          // Legg til pulsering ved høy score
+          const pulseScale = 1 + pulseAmount * 0.1;
+          ctx.save();
+          ctx.translate(this.x, this.y);
+          ctx.scale(pulseScale, pulseScale);
+          ctx.fillRect(-this.width/2, -this.height/2, this.width, this.height);
+          ctx.restore();
+          
+          // Ikke tegn dobbelt
+          return;
         } else {
           ctx.fillStyle = '#000000';
           ctx.shadowBlur = 0;
         }
         
+        // Normal tegning hvis ikke høy score
         ctx.fillRect(this.x - this.width/2, this.y - this.height/2, this.width, this.height);
         
         // Reset shadow
@@ -254,17 +352,27 @@ document.addEventListener('DOMContentLoaded', () => {
       const roadWidth = canvas.width * 0.85;
       const leftEdge = (canvas.width - roadWidth) / 2;
       
-      // Velg tilfeldig om hindringen er en person (30% sjanse)
-      const isHuman = Math.random() < 0.3;
+      // Velg tilfeldig type hindring
+      const obstacleType = Math.random();
+      const isHuman = obstacleType < 0.3; // 30% sjanse for menneske
+      const isCar = obstacleType >= 0.3 && obstacleType < 0.8; // 50% sjanse for bil
+      const isStaticObstacle = obstacleType >= 0.8; // 20% sjanse for statisk hindring
+      
+      // Velg tilfeldig biltype hvis bil
+      const carType = Math.floor(Math.random() * 3); // 0, 1 eller 2
       
       const obstacle = {
         x: leftEdge + Math.random() * roadWidth,
         y: -size,
-        width: size,
-        height: size,
-        color: isHuman ? '#FF9800' : '#E53935', // Oransje for mennesker, rød for andre hindringer
+        width: isCar ? size * 1.5 : size, // Biler er bredere
+        height: isCar ? size * 1.2 : size, // Biler er litt lengre
+        color: isHuman ? '#FF9800' : (isCar ? ['#FF4081', '#3F51B5', '#607D8B'][carType] : '#E53935'),
         speed: settings.obstacleSpeed + Math.random() * 2,
-        isHuman: isHuman, // Flagg for å indikere om dette er en person
+        isHuman: isHuman,
+        isCar: isCar,
+        carType: carType,
+        isStatic: isStaticObstacle,
+        angle: isCar ? (Math.random() * 0.1 - 0.05) : 0, // Litt rotasjon for biler
         draw() {
           if (this.isHuman) {
             // Tegn person
@@ -285,14 +393,89 @@ document.addEventListener('DOMContentLoaded', () => {
             ctx.fillStyle = '#FF9800';
             ctx.fillRect(this.x - this.width/5, this.y, this.width/10, this.height/2);
             ctx.fillRect(this.x + this.width/10, this.y, this.width/10, this.height/2);
-          } else {
-            // Tegn vanlig hindring
+          } else if (this.isCar) {
+            // Tegn bil
+            ctx.save();
+            ctx.translate(this.x, this.y);
+            ctx.rotate(this.angle);
+            
+            // Bilens karosseri
             ctx.fillStyle = this.color;
-            ctx.fillRect(this.x - this.width/2, this.y - this.height/2, this.width, this.height);
+            ctx.fillRect(-this.width/2, -this.height/2, this.width, this.height);
+            
+            // Bilens tak
+            ctx.fillStyle = '#333333';
+            const roofWidth = this.width * 0.7;
+            const roofHeight = this.height * 0.5;
+            ctx.fillRect(-roofWidth/2, -this.height/2 + this.height*0.15, roofWidth, roofHeight);
+            
+            // Bilens vinduer
+            ctx.fillStyle = '#87CEFA';
+            const windowWidth = roofWidth * 0.8;
+            const windowHeight = roofHeight * 0.7;
+            ctx.fillRect(-windowWidth/2, -this.height/2 + this.height*0.2, windowWidth, windowHeight);
+            
+            // Bilens hjul
+            ctx.fillStyle = '#333333';
+            const wheelSize = this.width * 0.2;
+            ctx.beginPath();
+            ctx.arc(-this.width/2 + wheelSize, -this.height/2 + this.height*0.85, wheelSize, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(this.width/2 - wheelSize, -this.height/2 + this.height*0.85, wheelSize, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Bilens lys
+            ctx.fillStyle = '#FFEB3B';
+            const lightSize = this.width * 0.1;
+            ctx.beginPath();
+            ctx.arc(-this.width/2 + lightSize, -this.height/2 + this.height*0.25, lightSize, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(this.width/2 - lightSize, -this.height/2 + this.height*0.25, lightSize, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.restore();
+          } else {
+            // Tegn statisk hindring (kjegle/bom)
+            if (this.isStatic) {
+              // Tegn trafikkkjegle
+              ctx.fillStyle = '#FF5722'; // Orange base
+              ctx.beginPath();
+              ctx.moveTo(this.x, this.y - this.height/2);
+              ctx.lineTo(this.x - this.width/2, this.y + this.height/2);
+              ctx.lineTo(this.x + this.width/2, this.y + this.height/2);
+              ctx.closePath();
+              ctx.fill();
+              
+              // Hvite refleksstriper
+              ctx.fillStyle = '#FFFFFF';
+              const stripesHeight = this.height * 0.6;
+              const stripesY = this.y - this.height/2 + this.height * 0.2;
+              const stripesWidth = this.width * 0.7;
+              
+              ctx.beginPath();
+              ctx.moveTo(this.x, stripesY);
+              ctx.lineTo(this.x - stripesWidth/2, stripesY + stripesHeight);
+              ctx.lineTo(this.x + stripesWidth/2, stripesY + stripesHeight);
+              ctx.closePath();
+              ctx.fill();
+            } else {
+              // Vanlig hindring
+              ctx.fillStyle = this.color;
+              ctx.fillRect(this.x - this.width/2, this.y - this.height/2, this.width, this.height);
+            }
           }
         },
         update() {
           this.y += this.speed;
+          
+          // Legg til litt bevegelse på bilene
+          if (this.isCar) {
+            this.x += Math.sin(Date.now() / 1000 + this.y / 100) * 0.5;
+            this.angle = Math.sin(Date.now() / 1000 + this.y / 100) * 0.05;
+          }
+          
           return this.y > canvas.height + this.height;
         }
       };
@@ -427,6 +610,25 @@ document.addEventListener('DOMContentLoaded', () => {
       // Tøm canvas
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
+      // Beregn wobble-intensitet basert på score og drikkestatus - mer aggressiv
+      const baseWobble = Math.min(15, score / 40); // Øker raskere og til høyere maksverdi
+      const drunkMultiplier = drinkBarFull ? 4 : 1; // Økt multiplier
+      screenWobble = baseWobble * drunkMultiplier;
+      
+      // Wobble screen basert på score og drikkestatus - mer aggressiv
+      if (screenWobble > 0) {
+        ctx.save();
+        const wobbleX = Math.sin(Date.now() / 150) * screenWobble; // Raskere wobbling
+        const wobbleY = Math.sin(Date.now() / 130) * screenWobble;
+        ctx.translate(wobbleX, wobbleY);
+        
+        // Legg til rotasjon ved høyere score - mer aggressiv
+        if (score > 100) { // Begynner tidligere
+          const rotationAmount = Math.sin(Date.now() / 800) * (Math.min(8, score / 150)) * 0.015 * drunkMultiplier; // Økt rotasjon
+          ctx.rotate(rotationAmount);
+        }
+      }
+      
       // Tegn bakgrunn og vei
       ctx.fillStyle = '#388E3C'; // Grønn bakgrunn
       ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -434,13 +636,47 @@ document.addEventListener('DOMContentLoaded', () => {
       const roadWidth = canvas.width * 0.85;
       const leftEdge = (canvas.width - roadWidth) / 2;
       
-      // Tegn vei
+      // Tegn vei med forstyrrelser ved høyere score
       ctx.fillStyle = '#424242'; // Grå vei
-      ctx.fillRect(leftEdge, 0, roadWidth, canvas.height);
+      if (score > 300) {
+        // Bølgende vei ved høy score
+        const waveFreq = Date.now() / 1000;
+        const waveHeight = Math.min(20, score / 50);
+        
+        ctx.beginPath();
+        ctx.moveTo(leftEdge, 0);
+        
+        for (let y = 0; y < canvas.height; y += 10) {
+          const waveX = Math.sin(waveFreq + y / 50) * waveHeight;
+          ctx.lineTo(leftEdge + waveX, y);
+        }
+        
+        ctx.lineTo(leftEdge + roadWidth + Math.sin(waveFreq + canvas.height / 50) * waveHeight, canvas.height);
+        
+        for (let y = canvas.height; y > 0; y -= 10) {
+          const waveX = Math.sin(waveFreq + y / 50) * waveHeight;
+          ctx.lineTo(leftEdge + roadWidth + waveX, y);
+        }
+        
+        ctx.closePath();
+        ctx.fill();
+      } else {
+        // Normal vei ved lav score
+        ctx.fillRect(leftEdge, 0, roadWidth, canvas.height);
+      }
       
       // Tegn midtlinje
       ctx.fillStyle = '#FFFFFF';
       ctx.fillRect(canvas.width / 2 - 5, 0, 10, canvas.height);
+      
+      // Tegn "dobbeltsyn" midtlinjer basert på score
+      if (score > 100) {
+        const ghostOffset = Math.min(30, score / 20);
+        ctx.globalAlpha = 0.3;
+        ctx.fillRect(canvas.width / 2 - 5 - ghostOffset, 0, 10, canvas.height);
+        ctx.fillRect(canvas.width / 2 - 5 + ghostOffset, 0, 10, canvas.height);
+        ctx.globalAlpha = 1.0;
+      }
       
       // Oppdater drikkebar-status
       updateDrinkBarStatus();
@@ -574,6 +810,14 @@ document.addEventListener('DOMContentLoaded', () => {
       
       // Fortsett spillsløyfe
       animationId = requestAnimationFrame(gameLoop);
+      
+      // Legg til glitcheffekter basert på score
+      applyGlitchEffects();
+      
+      // Reset canvas transform hvis wobble er aktivert
+      if (screenWobble > 0) {
+        ctx.restore();
+      }
     }
     
     // Hjelpefunksjon for formatering av tekst
@@ -596,9 +840,9 @@ document.addEventListener('DOMContentLoaded', () => {
       newHighScore = false;
       
       // Reset difficultySettings fra eventuelle endringer
-      difficultySettings.easy.obstacleFrequency = 0.01;
-      difficultySettings.medium.obstacleFrequency = 0.02;
-      difficultySettings.hard.obstacleFrequency = 0.04;
+      difficultySettings.easy.obstacleFrequency = 0.02;
+      difficultySettings.medium.obstacleFrequency = 0.035;
+      difficultySettings.hard.obstacleFrequency = 0.06;
       
       // Skjul startknapp
       startBtn.style.display = 'none';
