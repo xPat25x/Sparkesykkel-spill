@@ -8,6 +8,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const restartBtn = document.getElementById('restartBtn');
     const scoreDisplay = document.getElementById('score');
     
+    // Opprett high score display element
+    const highScoreDisplay = document.createElement('p');
+    highScoreDisplay.className = 'score-display';
+    highScoreDisplay.innerHTML = 'Rekord: <span id="highScore">0</span>';
+    highScoreDisplay.style.marginLeft = '20px';
+    
+    // Legg til high score ved siden av poengsum
+    const scoreContainer = scoreDisplay.parentElement;
+    scoreContainer.style.display = 'flex';
+    scoreContainer.style.justifyContent = 'center';
+    scoreContainer.appendChild(highScoreDisplay);
+    
+    // Hent high score fra localStorage eller sett til 0
+    let highScore = parseInt(localStorage.getItem('sparkesykkelHighScore') || '0');
+    document.getElementById('highScore').textContent = highScore;
+    
     // Sett canvas størrelse
     canvas.width = canvas.offsetWidth;
     canvas.height = canvas.offsetHeight;
@@ -25,6 +41,50 @@ document.addEventListener('DOMContentLoaded', () => {
     let invincible = false; // Uovervinnelig når drikkebaren er full
     let screenWobble = 0; // For sjanglende effekt
     let controlReduction = 1; // Faktor for redusert kontroll
+    let newHighScore = false; // Om det er oppnådd ny rekord
+    let highScoreAnimationTimer = 0; // Timer for high score-animasjon
+    
+    // Kommentarer ved omstart av spillet
+    const restartComments = [
+      "Husk: Aldri kjør sparkesykkel i fylla!",
+      "Det er smart å kjøre edru!",
+      "Kjører du påvirket risikerer du bot og førerkort!",
+      "Trafikken krever all din oppmerksomhet!",
+      "Hold deg unna rus når du skal kjøre!",
+      "Sparkesykler og alkohol er en farlig kombinasjon!",
+      "Godt valg å ikke kjøre påvirket!",
+      "Sikker ferdsel = edru kjøring",
+      "Mange ulykker skjer med rusa sjåfører",
+      "Tenk på din egen og andres sikkerhet!"
+    ];
+    
+    // Kommentarer når spilleren er utenfor veien
+    const roadComments = [
+      "Hold deg på veien!",
+      "Du kan ikke kjøre på fortauet!",
+      "I veien er du til fare for andre!",
+      "Sparkesykler skal holde seg i kjørebanen!",
+      "Ikke blokkér veien for fotgjengere!",
+      "Trafikkreglene gjelder også for sparkesykler!",
+      "Kjør der du skal - på veien!",
+      "Utenfor veien = farlig for alle!",
+      "Du risikerer bot når du kjører utenfor veien!",
+      "Vis hensyn til andre trafikanter!"
+    ];
+    
+    // Kommentarer når spilleren krasjer med mennesker
+    const humanCrashComments = [
+      "Du traff en fotgjenger!",
+      "Pass på hvor du kjører!",
+      "Vis hensyn til fotgjengere!",
+      "Sparkesykkelulykker med fotgjengere er alvorlig!",
+      "Mange fotgjengere skades av sparkesykler!",
+      "Reduser farten når det er mennesker i nærheten!",
+      "Du kan bli erstatningspliktig!",
+      "Å skade en fotgjenger kan være straffbart!",
+      "Ikke kjør på mennesker!",
+      "Fotgjengere har førsterett!"
+    ];
     
     // Kommentarer når spilleren blir "full"
     const drunkComments = [
@@ -194,16 +254,42 @@ document.addEventListener('DOMContentLoaded', () => {
       const roadWidth = canvas.width * 0.85;
       const leftEdge = (canvas.width - roadWidth) / 2;
       
+      // Velg tilfeldig om hindringen er en person (30% sjanse)
+      const isHuman = Math.random() < 0.3;
+      
       const obstacle = {
         x: leftEdge + Math.random() * roadWidth,
         y: -size,
         width: size,
         height: size,
-        color: '#E53935',
+        color: isHuman ? '#FF9800' : '#E53935', // Oransje for mennesker, rød for andre hindringer
         speed: settings.obstacleSpeed + Math.random() * 2,
+        isHuman: isHuman, // Flagg for å indikere om dette er en person
         draw() {
-          ctx.fillStyle = this.color;
-          ctx.fillRect(this.x - this.width/2, this.y - this.height/2, this.width, this.height);
+          if (this.isHuman) {
+            // Tegn person
+            ctx.fillStyle = '#FF9800'; // Kropp
+            
+            // Kropp
+            ctx.beginPath();
+            ctx.ellipse(this.x, this.y, this.width/2.5, this.height/2, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Hode
+            ctx.fillStyle = '#FFD54F';
+            ctx.beginPath();
+            ctx.arc(this.x, this.y - this.height/2, this.width/4, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Bein
+            ctx.fillStyle = '#FF9800';
+            ctx.fillRect(this.x - this.width/5, this.y, this.width/10, this.height/2);
+            ctx.fillRect(this.x + this.width/10, this.y, this.width/10, this.height/2);
+          } else {
+            // Tegn vanlig hindring
+            ctx.fillStyle = this.color;
+            ctx.fillRect(this.x - this.width/2, this.y - this.height/2, this.width, this.height);
+          }
         },
         update() {
           this.y += this.speed;
@@ -371,6 +457,9 @@ document.addEventListener('DOMContentLoaded', () => {
           obstacles.splice(i, 1);
           score += getSettings().scoreMultiplier;
           scoreDisplay.textContent = score;
+          
+          // Sjekk om vi har slått high score
+          checkHighScore();
         } else {
           obstacle.draw();
           
@@ -395,8 +484,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 playerBox.x2 > obstacleBox.x1 && 
                 playerBox.y1 < obstacleBox.y2 && 
                 playerBox.y2 > obstacleBox.y1) {
-              // Kollisjon!
-              endGame();
+              // Kollisjon! Sjekk om det var med en person
+              endGame(obstacle.isHuman ? 'human' : 'obstacle');
               return;
             }
           }
@@ -439,6 +528,9 @@ document.addEventListener('DOMContentLoaded', () => {
             // Legg til poeng
             score += 5;
             scoreDisplay.textContent = score;
+            
+            // Sjekk om vi har slått high score
+            checkHighScore();
           }
         }
       }
@@ -470,6 +562,16 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.fillText('Uovervinnelig: ' + Math.ceil(drinkBarTimer / 60) + 's', 10, 45);
       }
       
+      // Sjekk om spilleren er utenfor veien
+      const playerOffRoad = (player.x - player.width/2 < leftEdge || 
+                            player.x + player.width/2 > leftEdge + roadWidth);
+      
+      if (playerOffRoad && !invincible && Math.random() < 0.01) {
+        // 1% sjanse per frame for å vise melding når utenfor veien
+        const randomRoadComment = getRandomItem(roadComments);
+        showTemporaryMessage(randomRoadComment, 2000);
+      }
+      
       // Fortsett spillsløyfe
       animationId = requestAnimationFrame(gameLoop);
     }
@@ -485,11 +587,13 @@ document.addEventListener('DOMContentLoaded', () => {
       gameRunning = true;
       score = 0;
       scoreDisplay.textContent = score;
+      document.getElementById('highScore').textContent = highScore; // Oppdater high score display
       obstacles = [];
       collectibles = [];
       drinkCount = 0;
       drinkBarFull = false;
       invincible = false;
+      newHighScore = false;
       
       // Reset difficultySettings fra eventuelle endringer
       difficultySettings.easy.obstacleFrequency = 0.01;
@@ -504,16 +608,48 @@ document.addEventListener('DOMContentLoaded', () => {
       const messages = document.querySelectorAll('.game-message, .temp-message');
       messages.forEach(msg => msg.remove());
       
+      // Vis en tilfeldig kommentar ved omstart
+      const randomRestartComment = getRandomItem(restartComments);
+      const restartMsg = document.createElement('div');
+      restartMsg.textContent = randomRestartComment;
+      restartMsg.style.position = 'absolute';
+      restartMsg.style.top = '25%';
+      restartMsg.style.left = '50%';
+      restartMsg.style.transform = 'translateX(-50%)';
+      restartMsg.style.color = '#FFFFFF';
+      restartMsg.style.fontWeight = 'bold';
+      restartMsg.style.fontSize = '20px';
+      restartMsg.style.textAlign = 'center';
+      restartMsg.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+      restartMsg.style.padding = '10px';
+      restartMsg.style.borderRadius = '5px';
+      restartMsg.style.zIndex = '100';
+      restartMsg.style.width = '80%';
+      restartMsg.style.maxWidth = '600px';
+      restartMsg.className = 'temp-message';
+      document.querySelector('.game-container').appendChild(restartMsg);
+      
+      // Fjern kommentaren etter 3 sekunder
+      setTimeout(() => {
+        restartMsg.remove();
+      }, 3000);
+      
       // Start spillsløyfe
       animationId = requestAnimationFrame(gameLoop);
     }
     
     // Avslutt spillet
-    function endGame() {
+    function endGame(crashType = 'obstacle') {
       gameRunning = false;
       
-      // Velg tilfeldig kommentar
-      const randomComment = getRandomItem(gameOverComments);
+      // Velg tilfeldig kommentar basert på type krasj
+      let randomComment;
+      
+      if (crashType === 'human') {
+        randomComment = getRandomItem(humanCrashComments);
+      } else {
+        randomComment = getRandomItem(gameOverComments);
+      }
       
       // Vis melding og restart-knapp
       showMessage('Spill over! Din poengsum: ' + score + '\n\n' + randomComment);
@@ -551,6 +687,33 @@ document.addEventListener('DOMContentLoaded', () => {
       messageElem.style.maxWidth = '600px';
       
       document.querySelector('.game-container').appendChild(messageElem);
+    }
+    
+    // Vis midlertidig melding på skjermen
+    function showTemporaryMessage(text, duration = 2000) {
+      const tempMsg = document.createElement('div');
+      tempMsg.textContent = text;
+      tempMsg.style.position = 'absolute';
+      tempMsg.style.top = '160px';
+      tempMsg.style.left = '50%';
+      tempMsg.style.transform = 'translateX(-50%)';
+      tempMsg.style.color = '#FF5722';
+      tempMsg.style.fontWeight = 'bold';
+      tempMsg.style.fontSize = '18px';
+      tempMsg.style.textAlign = 'center';
+      tempMsg.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+      tempMsg.style.padding = '10px';
+      tempMsg.style.borderRadius = '5px';
+      tempMsg.style.zIndex = '100';
+      tempMsg.style.width = '80%';
+      tempMsg.style.maxWidth = '600px';
+      tempMsg.className = 'temp-message';
+      document.querySelector('.game-container').appendChild(tempMsg);
+      
+      // Fjern meldingen etter angitt tid
+      setTimeout(() => {
+        tempMsg.remove();
+      }, duration);
     }
     
     // Opprett vanskelighetsgrad-valgknapper
@@ -630,6 +793,72 @@ document.addEventListener('DOMContentLoaded', () => {
     ctx.font = '24px Arial';
     ctx.textAlign = 'center';
     ctx.fillText('Velg vanskelighetsgrad og trykk på Start Spill', canvas.width / 2, canvas.height / 2);
+    
+    // Vis nåværende high score
+    ctx.fillStyle = '#FFD700';
+    ctx.font = '18px Arial';
+    ctx.fillText('Nåværende rekord: ' + highScore, canvas.width / 2, canvas.height / 2 + 40);
+    
+    // High score animasjon
+    function createHighScoreAnimation() {
+      const highScoreAnim = document.createElement('div');
+      highScoreAnim.className = 'high-score-animation';
+      highScoreAnim.textContent = 'NY REKORD!';
+      highScoreAnim.style.position = 'absolute';
+      highScoreAnim.style.top = '120px';
+      highScoreAnim.style.left = '50%';
+      highScoreAnim.style.transform = 'translateX(-50%) scale(1)';
+      highScoreAnim.style.color = '#FFD700'; // Gull farge
+      highScoreAnim.style.fontWeight = 'bold';
+      highScoreAnim.style.fontSize = '32px';
+      highScoreAnim.style.textAlign = 'center';
+      highScoreAnim.style.textShadow = '0 0 10px rgba(255, 215, 0, 0.8)';
+      highScoreAnim.style.zIndex = '100';
+      highScoreAnim.style.transition = 'transform 0.5s ease-in-out, opacity 0.5s ease-in-out';
+      
+      document.querySelector('.game-container').appendChild(highScoreAnim);
+      
+      // Forbedret pulserende animasjon
+      let pulseCount = 0;
+      const maxPulses = 3;
+      const pulseAnimation = setInterval(() => {
+        if (pulseCount >= maxPulses) {
+          clearInterval(pulseAnimation);
+          return;
+        }
+        
+        // Vokse
+        highScoreAnim.style.transform = 'translateX(-50%) scale(1.5)';
+        highScoreAnim.style.opacity = '1';
+        
+        setTimeout(() => {
+          // Krympe
+          highScoreAnim.style.transform = 'translateX(-50%) scale(1)';
+          highScoreAnim.style.opacity = '0.8';
+        }, 300);
+        
+        pulseCount++;
+      }, 600);
+      
+      // Fjern animasjon etter 3 sekunder
+      setTimeout(() => {
+        highScoreAnim.remove();
+      }, 3000);
+    }
+    
+    // Funksjon for å sjekke og oppdatere high score
+    function checkHighScore() {
+      if (score > highScore) {
+        highScore = score;
+        localStorage.setItem('sparkesykkelHighScore', highScore.toString());
+        document.getElementById('highScore').textContent = highScore;
+        
+        if (!newHighScore) {
+          newHighScore = true;
+          createHighScoreAnimation();
+        }
+      }
+    }
     
   } catch (error) {
     console.error('Feil ved initialisering:', error);
