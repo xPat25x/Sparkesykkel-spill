@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const startBtn = document.getElementById('startBtn');
     const restartBtn = document.getElementById('restartBtn');
     const scoreDisplay = document.getElementById('score');
+    const highScoreDisplay = document.getElementById('highScore');
     const soundToggle = document.getElementById('soundToggle');
 
     // Sett lerretstørrelse basert på elementets offset
@@ -15,9 +16,10 @@ document.addEventListener('DOMContentLoaded', () => {
     let gameRunning = false;
     let gameOver = false;
     let score = 0;
+    let highScore = localStorage.getItem('highScore') ? parseInt(localStorage.getItem('highScore')) : 0;
     let animationId;
-    let obstacleSpeed = 5;
-    let obstacleFrequency = 100; // Lavere tall = hyppigere hindringer
+    let obstacleSpeed = 7; // Increased from 5 to 7
+    let obstacleFrequency = 80; // Reduced from 100 to 80
     let frameCount = 0;
     let debugMode = false; // Set to true to see hitboxes
     
@@ -515,10 +517,26 @@ document.addEventListener('DOMContentLoaded', () => {
       { name: 'pedestrian', color: '#FFC107', isCar: false }
     ];
 
+    // Funksjon for å velge hindringstype basert på poeng
+    function getObstacleType() {
+      // Øk sannsynligheten for biler basert på poeng
+      const carProbability = Math.min(0.8, 0.4 + (score / 50) * 0.4); // Starter på 40%, øker opp til 80%
+      
+      if (Math.random() < carProbability) {
+        // Velg en tilfeldig bil
+        const carTypes = obstacleTypes.filter(type => type.isCar);
+        return carTypes[Math.floor(Math.random() * carTypes.length)];
+      } else {
+        // Velg en tilfeldig ikke-bil hindring
+        const nonCarTypes = obstacleTypes.filter(type => !type.isCar);
+        return nonCarTypes[Math.floor(Math.random() * nonCarTypes.length)];
+      }
+    }
+
     function createObstacle() {
       const minSize = 25;
       const maxSize = 70;
-      const type = obstacleTypes[Math.floor(Math.random() * obstacleTypes.length)];
+      const type = getObstacleType();
       // Use fixed size for cars, random size for other obstacles
       const size = type.isCar ? 60 : (Math.random() * (maxSize - minSize) + minSize);
       const roadWidth = canvas.width * 0.85;
@@ -582,7 +600,10 @@ document.addEventListener('DOMContentLoaded', () => {
       const speedFactor = type.name === 'pedestrian'
         ? (Math.random() * 0.2 + 0.3)
         : (type.isCar ? (Math.random() * 0.4 + 0.7) : (Math.random() * 0.5 + 0.75));
-      const finalSpeed = obstacleSpeed * speedFactor * snowFactor;
+      
+      // Økende hastighet basert på poeng, opptil 50% raskere ved høy poengsum
+      const scoreSpeedBonus = Math.min(0.5, score * 0.01); 
+      const finalSpeed = obstacleSpeed * speedFactor * snowFactor * (1 + scoreSpeedBonus);
 
       return {
         x: xPos,
@@ -1420,6 +1441,25 @@ document.addEventListener('DOMContentLoaded', () => {
           if (obstacleFrequency > 30) obstacleFrequency -= 5; // Spawn obstacles faster
         }
       }
+      
+      // Legg til ekstra hindringer basert på poeng
+      const extraObstacleChance = Math.min(0.05, score * 0.0005); // Økende sannsynlighet med poeng
+      if (Math.random() < extraObstacleChance) {
+        // Legg til en ekstra bil hvis det er få hindringer på skjermen
+        if (obstacles.length < 10 + Math.floor(score/20)) {
+          const extraObstacle = createObstacle();
+          // Sørg for at ekstra hindringer er litt mer spredt på veien
+          extraObstacle.y = -extraObstacle.height - Math.random() * 100;
+          obstacles.push(extraObstacle);
+        }
+      }
+      
+      // Reduser hindringfrekvensen (spawn raskere) basert på poeng
+      const newFrequency = Math.max(30, 100 - Math.floor(score/5) * 2);
+      if (obstacleFrequency > newFrequency) {
+        obstacleFrequency = newFrequency;
+      }
+      
       if (frameCount % 200 === 0 && obstacles.length < 8) {
         obstacles.push(createObstacle());
       }
@@ -1468,6 +1508,15 @@ document.addEventListener('DOMContentLoaded', () => {
           obstacles.splice(i, 1);
           score++;
           scoreDisplay.textContent = score;
+          
+          // Vis melding ved poengmilepæler
+          if (score % 20 === 0) {
+            showMessage(`Vanskelighetsgrad øker! ${score} poeng`, 90);
+            // Kort kameraskjelv som indikerer økt vanskelighetsgrad
+            if (cameraShakeEnabled) {
+              cameraShake = 3;
+            }
+          }
         } else {
           obstacle.draw();
           
@@ -1636,8 +1685,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const shouldZoom = true; // Apply zoom for all obstacle types
       let zoomFactor = 1;
       let maxZoom = 1.4; // Same zoom level for all crashes
-      let zoomStep = 0.02;
-      let slowMotionFrames = collidedObstacle.isCar || collidedObstacle.type === 'cyclist' ? 40 : 20; // Add some slow motion for pedestrians too
+      let zoomStep = 0.03; // Slightly faster zoom
+      let slowMotionFrames = collidedObstacle.isCar || collidedObstacle.type === 'cyclist' ? 20 : 10; // Reduced from 40/20 to 20/10
       
       // New: Create explosion particles for car and cyclist collisions
       const particles = [];
@@ -1812,7 +1861,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         // Slow motion effect
-        const progressStep = slowMotionFrames > 0 ? 0.2 : 0.5;
+        const progressStep = slowMotionFrames > 0 ? 0.5 : 1.0; // Increased from 0.2/0.5 to 0.5/1.0
         if (slowMotionFrames > 0) {
           slowMotionFrames--;
         }
@@ -2324,6 +2373,9 @@ document.addEventListener('DOMContentLoaded', () => {
       // Play game over sound
       playSoundEffect('gameOver');
       
+      // Check if we achieved a new high score
+      const isNewHighScore = updateHighScore();
+      
       const gameOverDiv = document.createElement('div');
       gameOverDiv.className = 'game-over';
       
@@ -2333,12 +2385,25 @@ document.addEventListener('DOMContentLoaded', () => {
       const scoreInfo = document.createElement('p');
       scoreInfo.textContent = `Poengsum: ${score}`;
       
+      // Add high score information
+      const highScoreInfo = document.createElement('p');
+      highScoreInfo.textContent = `High Score: ${highScore}`;
+      
+      // Add new high score message if achieved
+      if (isNewHighScore) {
+        const newHighScoreMessage = document.createElement('p');
+        newHighScoreMessage.className = 'new-high-score';
+        newHighScoreMessage.textContent = 'NY HIGH SCORE!';
+        gameOverDiv.appendChild(newHighScoreMessage);
+      }
+      
       const safetyTip = document.createElement('p');
       safetyTip.className = 'safety-tip';
       safetyTip.textContent = getRandomSafetyTip();
       
       gameOverDiv.appendChild(heading);
       gameOverDiv.appendChild(scoreInfo);
+      gameOverDiv.appendChild(highScoreInfo);
       gameOverDiv.appendChild(safetyTip);
       
       const container = document.querySelector('.game-container');
@@ -2983,6 +3048,20 @@ document.addEventListener('DOMContentLoaded', () => {
       soundToggle.addEventListener('click', () => {
         toggleSound();
       });
+    }
+
+    // Initialiser high score
+    highScoreDisplay.textContent = highScore;
+
+    // Function to update high score
+    function updateHighScore() {
+      if (score > highScore) {
+        highScore = score;
+        localStorage.setItem('highScore', highScore);
+        highScoreDisplay.textContent = highScore;
+        return true;
+      }
+      return false;
     }
   } catch (error) {
     console.error('Game initialization error:', error);
