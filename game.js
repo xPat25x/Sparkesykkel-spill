@@ -518,10 +518,11 @@ document.addEventListener('DOMContentLoaded', () => {
     function createObstacle() {
       const minSize = 25;
       const maxSize = 70;
-      const size = Math.random() * (maxSize - minSize) + minSize;
+      const type = obstacleTypes[Math.floor(Math.random() * obstacleTypes.length)];
+      // Use fixed size for cars, random size for other obstacles
+      const size = type.isCar ? 60 : (Math.random() * (maxSize - minSize) + minSize);
       const roadWidth = canvas.width * 0.85;
       const leftEdge = (canvas.width - roadWidth) / 2;
-      const type = obstacleTypes[Math.floor(Math.random() * obstacleTypes.length)];
       const wobbleAmount = (type.name === 'cyclist' || type.name === 'pedestrian') ? 0.05 : 0;
       const bobAmount = (type.name === 'cyclist' || type.name === 'pedestrian') ? 0.5 : 0;
       let xPos, obstacleWidth, obstacleHeight, yPos;
@@ -1163,7 +1164,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Add screen "tug" and zoom effect that gets stronger with drunk level
     function applyDrunkScreenEffects() {
-      if (!isDrunk || drunkLevel <= 0.1) return;
+      // Don't apply effects if game is not running, player is not drunk, or drunk level is too low
+      if (!gameRunning || !isDrunk || drunkLevel <= 0.1) {
+        // Make sure we clean up any existing effects
+        ctx.globalAlpha = 1.0;
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.filter = 'none';
+        return false;
+      }
       
       // Calculate zoom effect based on drunk level
       const zoomFactor = 1 + (Math.sin(frameCount * 0.02) * 0.05 * drunkLevel);
@@ -1219,6 +1227,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function gameLoop() {
       if (!gameRunning) return;
+      
+      // Make sure we always start with a clean state
+      if (frameCount === 0) {
+        ctx.globalAlpha = 1.0;
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.filter = 'none';
+        ctx.resetTransform ? ctx.resetTransform() : ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
       
       // Reset transforms at the beginning of each frame
       ctx.resetTransform ? ctx.resetTransform() : ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -1292,6 +1309,12 @@ document.addEventListener('DOMContentLoaded', () => {
           // but skip re-rendering the background
           player.update(keys);
           player.draw();
+          
+          // Make sure we restore the canvas state before continuing
+          ctx.globalAlpha = 1.0;
+          ctx.globalCompositeOperation = 'source-over';
+          ctx.filter = 'none';
+          ctx.resetTransform ? ctx.resetTransform() : ctx.setTransform(1, 0, 0, 1, 0, 0);
           
           // Update score
           animationId = requestAnimationFrame(gameLoop);
@@ -2109,13 +2132,71 @@ document.addEventListener('DOMContentLoaded', () => {
       animationId = requestAnimationFrame(animateCollision);
     }
 
+    function cleanupGameEffects() {
+      // Cancel any animations
+      cancelAnimationFrame(animationId);
+      
+      // Remove all overlay elements
+      const overlays = document.querySelectorAll('div[style*="backgroundColor"], .game-message, .game-over');
+      overlays.forEach(overlay => overlay.remove());
+      
+      // Reset all drunk-related variables
+      isDrunk = true; // Keep this true to enable the gradual system
+      drunkLevel = 0;
+      swayAngle = 0;
+      isGlitching = false;
+      glitchIntensity = 0;
+      glitchOffsetX = 0;
+      glitchOffsetY = 0;
+      cameraShake = 0;
+      roadDistortion = 0;
+      visionBlur = 0;
+      lastRandomDirection = 0;
+      randomDirectionTimer = 0;
+      lastScoreThreshold = 0;
+      
+      // Reset canvas state completely
+      if (ctx) {
+        ctx.globalAlpha = 1.0;
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.filter = 'none';
+        ctx.resetTransform ? ctx.resetTransform() : ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
+    }
+
     function startGame() {
       if (gameRunning) return;
       
       // Cancel any ongoing animations
       cancelAnimationFrame(animationId);
       
-      // Reset canvas completely to fix zoom issues
+      // Remove game over screen if it exists
+      const gameOverScreen = document.querySelector('.game-over');
+      if (gameOverScreen) {
+        gameOverScreen.remove();
+      }
+      
+      // Remove ANY overlay elements and messages
+      document.querySelectorAll('.game-message, div[style*="backgroundColor"]').forEach(el => {
+        el.remove();
+      });
+      
+      // Completely reset drunk effect variables
+      isGlitching = false;
+      glitchIntensity = 0;
+      glitchOffsetX = 0;
+      glitchOffsetY = 0;
+      cameraShake = 0;
+      roadDistortion = 0;
+      visionBlur = 0;
+      
+      // Full reset of the canvas context
+      ctx.globalAlpha = 1.0;
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.filter = 'none';
+      ctx.shadowBlur = 0;
+      ctx.shadowColor = 'transparent';
       ctx.resetTransform ? ctx.resetTransform() : ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
@@ -2145,7 +2226,6 @@ document.addEventListener('DOMContentLoaded', () => {
       isDrunk = true; // Keep this true to enable the gradual system
       drunkLevel = 0; // Start at 0 (completely sober)
       swayAngle = 0;
-      visionBlur = 0;
       lastRandomDirection = 0;
       randomDirectionTimer = 0;
       lastScoreThreshold = 0; // Reset score threshold tracker
