@@ -44,6 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let newHighScore = false; // Om det er oppnådd ny rekord
     let highScoreAnimationTimer = 0; // Timer for high score-animasjon
     let glitchIntensity = 0; // Intensitet på glitcheffekter basert på score
+    let frameCount = 0; // For timing-baserte effekter
     
     // Kommentarer ved omstart av spillet
     const restartComments = [
@@ -252,6 +253,8 @@ document.addEventListener('DOMContentLoaded', () => {
       width: 50,
       height: 70,
       speed: 10,
+      tilt: 0, // Tilføyd for å lage "lene-effekt" ved kjøring
+      trail: [], // Tilføyd for visuell trail-effekt
       draw() {
         // Endre farge basert på tilstand
         if (invincible) {
@@ -286,17 +289,56 @@ document.addEventListener('DOMContentLoaded', () => {
           ctx.shadowBlur = 0;
         }
         
-        // Normal tegning hvis ikke høy score
-        ctx.fillRect(this.x - this.width/2, this.y - this.height/2, this.width, this.height);
+        // Tegn trail-effekt (etterslep) når spilleren beveger seg
+        if (this.trail.length > 0) {
+          for (let i = 0; i < this.trail.length; i++) {
+            const point = this.trail[i];
+            const alpha = 0.3 * ((this.trail.length - i) / this.trail.length);
+            ctx.fillStyle = `rgba(0, 0, 0, ${alpha})`;
+            ctx.fillRect(point.x - this.width/2, point.y - this.height/2, this.width, this.height);
+          }
+        }
+        
+        // Tegn sparkesykkel med tilt-effekt
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.tilt); // Roter basert på bevegelse
+        
+        // Tegn kropp
+        ctx.fillStyle = invincible ? '#4CAF50' : '#000000';
+        ctx.fillRect(-this.width/2, -this.height/2, this.width, this.height);
+        
+        // Tegn frontstyrestang
+        ctx.fillStyle = '#555555';
+        ctx.fillRect(-this.width/4, -this.height/2, this.width/8, -this.height/3);
+        
+        // Tegn hjul
+        ctx.fillStyle = '#333333';
+        ctx.beginPath();
+        ctx.arc(-this.width/4, this.height/2, this.width/6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(this.width/4, this.height/2, this.width/6, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Tegn styrestyrestang
+        ctx.fillStyle = '#555555';
+        ctx.fillRect(-this.width/2, -this.height/2, this.width, this.height/10);
+        
+        ctx.restore();
         
         // Reset shadow
         ctx.shadowBlur = 0;
       },
       update(keys) {
+        // Lagre forrige posisjon
+        const prevX = this.x;
+        const prevY = this.y;
+        
         // Oppdater hastighet basert på vanskelighetsgrad
         this.speed = getSettings().playerSpeed;
         
-        // Beveg spilleren basert på tastatur - alltid full kontroll
+        // Beveg spilleren basert på tastatur
         if (keys.ArrowLeft || keys.a) this.x -= this.speed;
         if (keys.ArrowRight || keys.d) this.x += this.speed;
         if (keys.ArrowUp || keys.w) this.y -= this.speed;
@@ -305,6 +347,29 @@ document.addEventListener('DOMContentLoaded', () => {
         // Hold spilleren innenfor canvas
         this.x = Math.max(this.width/2, Math.min(this.x, canvas.width - this.width/2));
         this.y = Math.max(this.height/2, Math.min(this.y, canvas.height - this.height/2));
+        
+        // Beregn tilt basert på horisontal bevegelse
+        if (keys.ArrowLeft || keys.a) {
+          this.tilt = Math.max(-0.2, this.tilt - 0.05);
+        } else if (keys.ArrowRight || keys.d) {
+          this.tilt = Math.min(0.2, this.tilt + 0.05);
+        } else {
+          // Returner til normal posisjon
+          this.tilt *= 0.8;
+        }
+        
+        // Legg til trail-effekt hvis spilleren beveger seg raskt nok
+        const movement = Math.sqrt(Math.pow(this.x - prevX, 2) + Math.pow(this.y - prevY, 2));
+        if (movement > 3) {
+          this.trail.push({x: prevX, y: prevY});
+          // Behold bare de siste 5 posisjonene
+          if (this.trail.length > 5) {
+            this.trail.shift();
+          }
+        } else if (this.trail.length > 0 && frameCount % 3 === 0) {
+          // Reduser trail gradvis når spilleren står stille
+          this.trail.shift();
+        }
       }
     };
     
@@ -361,6 +426,9 @@ document.addEventListener('DOMContentLoaded', () => {
       // Velg tilfeldig biltype hvis bil
       const carType = Math.floor(Math.random() * 3); // 0, 1 eller 2
       
+      // Velg bevegelsesmønster (for biler og mennesker)
+      const movementPattern = Math.floor(Math.random() * 5); // 0-4 forskjellige mønstre
+      
       const obstacle = {
         x: leftEdge + Math.random() * roadWidth,
         y: -size,
@@ -373,6 +441,8 @@ document.addEventListener('DOMContentLoaded', () => {
         carType: carType,
         isStatic: isStaticObstacle,
         angle: isCar ? (Math.random() * 0.1 - 0.05) : 0, // Litt rotasjon for biler
+        movementPattern: movementPattern, // Bevegelsesmønster
+        movementOffset: 0, // For å tracke bevegelsen
         draw() {
           if (this.isHuman) {
             // Tegn person
@@ -470,11 +540,54 @@ document.addEventListener('DOMContentLoaded', () => {
         update() {
           this.y += this.speed;
           
-          // Legg til litt bevegelse på bilene
-          if (this.isCar) {
-            this.x += Math.sin(Date.now() / 1000 + this.y / 100) * 0.5;
-            this.angle = Math.sin(Date.now() / 1000 + this.y / 100) * 0.05;
+          // Implementer forskjellige bevegelsesmønstre basert på type
+          if (this.isHuman) {
+            // Mennesker beveger seg mer tilfeldig
+            switch(this.movementPattern) {
+              case 0: // Sidelengs bevegelse
+                this.x += Math.sin(Date.now() / 500 + this.y / 50) * 1.5;
+                break;
+              case 1: // Zigzag
+                this.x += (Math.sin(this.y / 30) > 0 ? 1 : -1) * 1.2;
+                break;
+              case 2: // Litt beruset gange
+                this.x += Math.sin(Date.now() / 300) * 2;
+                break;
+              default: // Standard sidelengs bevegelse
+                this.x += Math.sin(Date.now() / 1000 + this.y / 100) * 0.8;
+            }
+          } else if (this.isCar) {
+            // Biler har mer forutsigbare men forskjellige bevegelser
+            switch(this.movementPattern) {
+              case 0: // Rett fram
+                // Ingen sidelengs bevegelse
+                break;
+              case 1: // Slakkere sving
+                this.x += Math.sin(Date.now() / 1500 + this.y / 150) * 1.2;
+                this.angle = Math.sin(Date.now() / 1500 + this.y / 150) * 0.1;
+                break;
+              case 2: // Skiftende fil
+                this.movementOffset += 0.02;
+                if (this.movementOffset > 6.28) this.movementOffset = 0;
+                const targetX = Math.sin(this.movementOffset) * 50;
+                this.x += (targetX - this.x) * 0.02;
+                this.angle = (targetX - this.x) * 0.002;
+                break;
+              case 3: // Fyllekjøring
+                this.x += Math.sin(Date.now() / 800 + this.y / 80) * 2.5;
+                this.angle = Math.sin(Date.now() / 800 + this.y / 80) * 0.15;
+                break;
+              default: // Standard bevegelse
+                this.x += Math.sin(Date.now() / 1000 + this.y / 100) * 0.5;
+                this.angle = Math.sin(Date.now() / 1000 + this.y / 100) * 0.05;
+            }
           }
+          
+          // Hold hindringen på veien
+          const roadWidth = canvas.width * 0.85;
+          const leftEdge = (canvas.width - roadWidth) / 2;
+          const margin = this.width / 2;
+          this.x = Math.max(leftEdge + margin, Math.min(this.x, leftEdge + roadWidth - margin));
           
           return this.y > canvas.height + this.height;
         }
@@ -607,6 +720,9 @@ document.addEventListener('DOMContentLoaded', () => {
     function gameLoop() {
       if (!gameRunning) return;
       
+      // Øk frame counter for timing-baserte effekter
+      frameCount++;
+      
       // Tøm canvas
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
@@ -701,19 +817,19 @@ document.addEventListener('DOMContentLoaded', () => {
           
           // Sjekk for kollisjoner kun om ikke uovervinnelig
           if (!invincible) {
-            // Enkel kollisjonsdetektor (AABB)
+            // Forbedret kollisjonsdetektor - mer presis
             const playerBox = {
-              x1: player.x - player.width/2,
-              y1: player.y - player.height/2,
-              x2: player.x + player.width/2,
-              y2: player.y + player.height/2
+              x1: player.x - player.width/2 * 0.8, // Litt mindre kollisjonsbox for mer presisjon
+              y1: player.y - player.height/2 * 0.8,
+              x2: player.x + player.width/2 * 0.8,
+              y2: player.y + player.height/2 * 0.8
             };
             
             const obstacleBox = {
-              x1: obstacle.x - obstacle.width/2,
-              y1: obstacle.y - obstacle.height/2,
-              x2: obstacle.x + obstacle.width/2,
-              y2: obstacle.y + obstacle.height/2
+              x1: obstacle.x - obstacle.width/2 * 0.9,
+              y1: obstacle.y - obstacle.height/2 * 0.9,
+              x2: obstacle.x + obstacle.width/2 * 0.9,
+              y2: obstacle.y + obstacle.height/2 * 0.9
             };
             
             if (playerBox.x1 < obstacleBox.x2 && 
