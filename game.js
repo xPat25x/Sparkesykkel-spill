@@ -410,23 +410,21 @@ document.addEventListener('DOMContentLoaded', () => {
       update(keys) {
         // Update drunk-related values
         if (isDrunk && drunkLevel > 0) {
-          // Lower frequency updates for swayAngle to improve performance
-          if (frameCount % 2 === 0) {
-            swayAngle += 0.05;
-          }
+          // Higher frequency updates for swayAngle to improve responsiveness
+          swayAngle += 0.08; // Increased from 0.05 for sharper movement
           
           // Only recalculate vision blur periodically
           if (frameCount % 5 === 0) {
             visionBlur = 3 + Math.sin(Math.floor(frameCount * 0.03)) * 2 * drunkLevel;
           }
           
-          // Randomly change direction when drunk, intensity based on drunk level
-          // but with less frequent changes for better performance
+          // Randomly change direction when drunk, with higher intensity
           randomDirectionTimer--;
           if (randomDirectionTimer <= 0) {
-            lastRandomDirection = (Math.random() - 0.5) * drunkLevel * 2;
-            // Longer time between random direction changes for better performance
-            randomDirectionTimer = Math.floor(Math.random() * 80) + 50;
+            // Stronger random direction changes (increased multiplier)
+            lastRandomDirection = (Math.random() - 0.5) * drunkLevel * 3; // Increased from 2 to 3
+            // Shorter time between random direction changes for more erratic movement
+            randomDirectionTimer = Math.floor(Math.random() * 40) + 20; // Reduced from 80+50 to 40+20
           }
         }
           
@@ -439,13 +437,11 @@ document.addEventListener('DOMContentLoaded', () => {
           this.speedX -= 0.8; // Increased from 0.5 for faster response
           this.targetTilt = -0.2;
           
-          // Drunk effects make controls less responsive and more exaggerated
+          // Drunk effects make controls more erratic and responsive
           if (isDrunk && drunkLevel > 0) {
-            // Optimize random calculations - less frequent
-            if (frameCount % 2 === 0) {
-              this.speedX += (Math.random() - 0.7) * drunkLevel; // Random adjustments
-              this.targetTilt = -0.2 - Math.random() * drunkLevel * 0.2; // Exaggerated tilt
-            }
+            // More responsive random calculations
+            this.speedX += (Math.random() - 0.7) * drunkLevel * 1.5; // Increased from 1.0 to 1.5
+            this.targetTilt = -0.2 - Math.random() * drunkLevel * 0.3; // Increased from 0.2 to 0.3
           }
         }
         if ((keys.ArrowRight || keys.d) && this.x < canvas.width - this.width / 2) {
@@ -454,11 +450,8 @@ document.addEventListener('DOMContentLoaded', () => {
           
           // Drunk effects for right movement
           if (isDrunk && drunkLevel > 0) {
-            // Optimize random calculations - less frequent
-            if (frameCount % 2 === 0) {
-              this.speedX += (Math.random() - 0.3) * drunkLevel; // Random adjustments
-              this.targetTilt = 0.2 + Math.random() * drunkLevel * 0.2; // Exaggerated tilt
-            }
+            this.speedX += (Math.random() - 0.3) * drunkLevel * 1.5; // Increased from 1.0 to 1.5
+            this.targetTilt = 0.2 + Math.random() * drunkLevel * 0.3; // Increased from 0.2 to 0.3
           }
         }
         if (!(keys.ArrowLeft || keys.a || keys.ArrowRight || keys.d)) {
@@ -469,11 +462,8 @@ document.addEventListener('DOMContentLoaded', () => {
           
           // Drunk effects for up movement
           if (isDrunk && drunkLevel > 0) {
-            // Optimize random calculations - less frequent
-            if (frameCount % 2 === 0) {
-              this.speedY += (Math.random() - 0.7) * drunkLevel;
-              this.speedX += (Math.random() - 0.5) * drunkLevel * 0.5; // Weaving
-            }
+            this.speedY += (Math.random() - 0.7) * drunkLevel * 1.3; // Increased from 1.0 to 1.3
+            this.speedX += (Math.random() - 0.5) * drunkLevel * 0.8; // Increased from 0.5 to 0.8
           }
         }
         if ((keys.ArrowDown || keys.s) && this.y < canvas.height - this.height / 2) {
@@ -481,24 +471,20 @@ document.addEventListener('DOMContentLoaded', () => {
           
           // Drunk effects for down movement
           if (isDrunk && drunkLevel > 0) {
-            // Optimize random calculations - less frequent
-            if (frameCount % 2 === 0) {
-              this.speedY += (Math.random() - 0.3) * drunkLevel;
-              this.speedX += (Math.random() - 0.5) * drunkLevel * 0.5; // Weaving
-            }
+            this.speedY += (Math.random() - 0.3) * drunkLevel * 1.3; // Increased from 1.0 to 1.3
+            this.speedX += (Math.random() - 0.5) * drunkLevel * 0.8; // Increased from 0.5 to 0.8
           }
         }
         
         // Apply random steering when drunk, even without input
         if (isDrunk && drunkLevel > 0) {
-          // Apply random steering less frequently for better performance
-          if (frameCount % 2 === 0) {
-            this.speedX += lastRandomDirection * 0.2 * drunkLevel;
-            this.speedY += (Math.random() - 0.5) * drunkLevel * 0.3;
-          }
+          // Apply sharper random steering
+          this.speedX += lastRandomDirection * 0.3 * drunkLevel; // Increased from 0.2 to 0.3
+          this.speedY += (Math.random() - 0.5) * drunkLevel * 0.5; // Increased from 0.3 to 0.5
         }
         
-        this.tilt += (this.targetTilt - this.tilt) * (isDrunk && drunkLevel > 0.3 ? 0.05 : 0.1); // Slower tilt response when drunk
+        // Faster tilt response even when drunk
+        this.tilt += (this.targetTilt - this.tilt) * (isDrunk && drunkLevel > 0.3 ? 0.1 : 0.15); // Increased from 0.05 to 0.1 when drunk
         this.speedX = Math.max(-this.speed, Math.min(this.speedX, this.speed));
         this.speedY = Math.max(-this.speed, Math.min(this.speedY, this.speed));
         this.x += this.speedX;
@@ -2148,10 +2134,44 @@ document.addEventListener('DOMContentLoaded', () => {
             ctx.shadowBlur = 15;
             ctx.fillText('GAME OVER!', 0, 0);
             
-            // Add some smaller text
+            // Add some smaller text - different messages based on if player is drunk
             ctx.font = 'bold 15px Arial';
             ctx.shadowBlur = 5;
-            ctx.fillText(collidedObstacle.isCar ? 'BIL KRÆSJ!' : 'SYKKEL KRÆSJ!', 0, 25);
+            
+            let crashMessage = '';
+            if (isDrunk && drunkLevel > 0.1) {
+              // Different messages based on drunk level and obstacle type
+              if (collidedObstacle.isCar) {
+                if (drunkLevel >= 0.6) {
+                  crashMessage = 'KATASTROFAL BILKRÆSJ! FOR BERUSET TIL Å KJØRE!';
+                } else if (drunkLevel >= 0.3) {
+                  crashMessage = 'ALKOHOL + BIL = KATASTROFE!';
+                } else {
+                  crashMessage = 'SELV MED LITT ALKOHOL ER FAREN STOR!';
+                }
+              } else if (collidedObstacle.type === 'cyclist') {
+                if (drunkLevel >= 0.6) {
+                  crashMessage = 'KNUSTE SYKKELEN I FYLLA!';
+                } else if (drunkLevel >= 0.3) {
+                  crashMessage = 'ALKOHOL ØDELA BALANSEN DIN!';
+                } else {
+                  crashMessage = 'PÅVIRKET KJØRING ER ALDRI TRYGT!';
+                }
+              } else if (collidedObstacle.type === 'pedestrian') {
+                if (drunkLevel >= 0.6) {
+                  crashMessage = 'PÅKJØRTE FOTGJENGER I FYLLA!';
+                } else if (drunkLevel >= 0.3) {
+                  crashMessage = 'BERUSET KJØRING SKADET FOTGJENGER!';
+                } else {
+                  crashMessage = 'SELV LITT ALKOHOL PÅVIRKER REAKSJONSTIDEN!';
+                }
+              }
+            } else {
+              // Original messages for sober crashes
+              crashMessage = collidedObstacle.isCar ? 'BIL KRÆSJ!' : 'SYKKEL KRÆSJ!';
+            }
+            
+            ctx.fillText(crashMessage, 0, 25);
             
             ctx.restore();
           }
@@ -3035,9 +3055,15 @@ document.addEventListener('DOMContentLoaded', () => {
         "Parker sparkesykkelen ansvarlig så den ikke er i veien."
       ];
 
-      // If drunk, always show the drunk driving warning
+      // If drunk, customize message based on drunk level
       if (isDrunk && drunkLevel > 0.1) {
-        return "Å kjøre sparkesykkel i påvirket tilstand er farlig og ulovlig! Ikke gjør det i virkeligheten.";
+        if (drunkLevel >= 0.6) {
+          return "Du var DRITINGS! I virkeligheten ville du blitt arrestert, mistet førerkortet, og fått høy bot!";
+        } else if (drunkLevel >= 0.3) {
+          return "Å kjøre sparkesykkel i beruset tilstand gir høy ulykkesrisiko og er ulovlig med straff på linje med promillekjøring!";
+        } else {
+          return "Selv med litt alkohol i blodet er det farlig og ulovlig å kjøre sparkesykkel!";
+        }
       } else {
         return safetyTips[Math.floor(Math.random() * safetyTips.length)];
       }
