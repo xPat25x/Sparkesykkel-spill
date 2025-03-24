@@ -1,4 +1,4 @@
-# Deathtrip - Sparkesykkel Sikkerhetskampanje
+# Deathtrip - Sparkesykkel kampanje
 
 Et interaktivt spill for å øke bevisstheten om sikkerheten ved bruk av elektriske sparkesykler i trafikken.
 
