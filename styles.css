@@ -487,6 +487,30 @@ button:focus-visible {
     transform: none;
 }
 
+.clear-data-btn {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    margin-left: 10px;
+    padding: 5px 10px;
+    border-radius: 5px;
+    background-color: rgba(255, 0, 0, 0.1);
+    transition: background-color 0.3s;
+    box-shadow: none;
+    color: #fff;
+}
+
+.clear-data-btn:hover {
+    background-color: rgba(255, 0, 0, 0.3);
+    transform: none;
+}
+
+.clear-data-btn:active {
+    background-color: rgba(255, 0, 0, 0.5);
+    transform: none;
+}
+
 .new-high-score {
     color: gold;
     font-size: 1.4em;
@@ -505,4 +529,475 @@ button:focus-visible {
         transform: scale(1.1);
         opacity: 1;
     }
+}
+
+.name-input-container {
+  margin: 20px 0;
+  padding: 15px;
+  background-color: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  text-align: center;
+}
+
+.name-input-container label {
+  display: block;
+  margin-bottom: 10px;
+  font-weight: bold;
+  color: #fff;
+}
+
+.name-input-container input, 
+.name-input-container textarea {
+  width: 80%;
+  padding: 10px;
+  border: 2px solid var(--primary-color);
+  border-radius: 5px;
+  background-color: rgba(255, 255, 255, 0.95);
+  color: #000;
+  margin-bottom: 10px;
+  font-size: 16px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+}
+
+.name-input-container textarea {
+  min-height: 60px;
+  max-height: 150px;
+  resize: vertical;
+  overflow-y: auto;
+  font-family: inherit;
+  line-height: 1.4;
+}
+
+.name-input-container input:focus,
+.name-input-container textarea:focus {
+  outline: none;
+  border-color: #FFC107;
+  box-shadow: 0 0 15px rgba(255, 193, 7, 0.5);
+}
+
+.submit-name-btn {
+  display: block;
+  margin: 10px auto;
+  padding: 10px 20px;
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: bold;
+  transition: background-color 0.2s;
+}
+
+.submit-name-btn:hover {
+  background-color: var(--primary-dark);
+}
+
+.highscore-list {
+  margin: 20px 0;
+  padding: 15px;
+  background-color: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  text-align: center;
+  width: 100%;
+}
+
+.highscore-list h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  color: var(--score-color);
+  font-size: 24px;
+  text-shadow: 0 0 5px rgba(255, 215, 0, 0.5);
+}
+
+.highscore-list ol {
+  text-align: left;
+  padding-left: 20px;
+  margin: 10px auto;
+  max-width: 300px;
+}
+
+.highscore-list li {
+  padding: 5px 0;
+  color: #fff;
+  font-size: 16px;
+}
+
+.highscore-list li:nth-child(1) {
+  color: gold;
+  font-weight: bold;
+  font-size: 18px;
+}
+
+.highscore-list li:nth-child(2) {
+  color: silver;
+  font-weight: bold;
+}
+
+.highscore-list li:nth-child(3) {
+  color: #cd7f32; /* Bronze */
+  font-weight: bold;
+}
+
+/* Highscore modal */
+.highscore-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: rgba(0, 0, 0, 0.8);
+  padding: 30px;
+  border-radius: 10px;
+  border: 2px solid var(--primary-color);
+  max-width: 550px;
+  width: 90%;
+  height: auto;
+  min-height: 500px;
+  z-index: 1000;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+}
+
+.close-highscore-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background-color: transparent;
+  border: none;
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.close-highscore-btn:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Justering for highscore-knappen */
+#highscoreBtn {
+  margin-left: 10px;
+  background-color: #9c27b0; /* Lilla farge for å skille den ut */
+}
+
+#highscoreBtn:hover {
+  background-color: #7b1fa2;
+}
+
+/* Styling for tabellaktig highscore-visning */
+.highscore-header {
+  display: grid;
+  grid-template-columns: 80px 1fr 100px;
+  margin-bottom: 10px;
+  padding: 10px 15px;
+  background-color: rgba(0, 0, 0, 0.4);
+  border-radius: 5px;
+  font-weight: bold;
+  color: #FFD700;
+  font-size: 18px;
+}
+
+.highscore-table {
+  max-height: 350px;
+  overflow-y: auto;
+  margin: 0 auto;
+  width: 100%;
+  scrollbar-width: thin;
+  scrollbar-color: var(--primary-color) rgba(0, 0, 0, 0.2);
+}
+
+.highscore-table::-webkit-scrollbar {
+  width: 8px;
+}
+
+.highscore-table::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+.highscore-table::-webkit-scrollbar-thumb {
+  background-color: var(--primary-color);
+  border-radius: 4px;
+}
+
+.highscore-row {
+  display: grid;
+  grid-template-columns: 80px 1fr 100px;
+  padding: 10px 15px;
+  margin-bottom: 5px;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 5px;
+  transition: background-color 0.2s;
+  font-size: 16px;
+}
+
+.highscore-row:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.rank-cell {
+  font-weight: bold;
+  text-align: left;
+}
+
+.name-cell {
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 300px;
+  padding-right: 15px;
+}
+
+.score-cell {
+  text-align: right;
+  font-weight: bold;
+}
+
+.rank-1 {
+  background-color: rgba(255, 215, 0, 0.3);
+  border-left: 3px solid gold;
+}
+
+.rank-2 {
+  background-color: rgba(192, 192, 192, 0.3);
+  border-left: 3px solid silver;
+}
+
+.rank-3 {
+  background-color: rgba(205, 127, 50, 0.3);
+  border-left: 3px solid #cd7f32;
+}
+
+.no-scores {
+  text-align: center;
+  padding: 20px;
+  font-style: italic;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.long-name {
+  position: relative;
+  cursor: help;
+}
+
+.long-name:hover {
+  overflow: visible;
+  z-index: 5;
+}
+
+.long-name:hover::after {
+  content: attr(title);
+  position: absolute;
+  left: 0;
+  top: 100%;
+  background-color: rgba(0, 0, 0, 0.85);
+  color: white;
+  padding: 5px 10px;
+  border-radius: 5px;
+  white-space: normal;
+  max-width: 300px;
+  word-wrap: break-word;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4);
+  z-index: 10;
+}
+
+@media (max-width: 768px) {
+  .highscore-modal {
+    max-width: 450px;
+    min-height: 450px;
+    padding: 20px;
+  }
+  
+  .highscore-header, .highscore-row {
+    grid-template-columns: 70px 1fr 90px;
+    padding: 8px 12px;
+    font-size: 16px;
+  }
+  
+  .name-cell {
+    max-width: 200px;
+  }
+}
+
+.clickable-name {
+  cursor: pointer;
+  position: relative;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-decoration-color: rgba(255, 255, 255, 0.5);
+}
+
+.clickable-name:hover {
+  color: #ffd700;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+.name-popup {
+  position: absolute;
+  background-color: rgba(30, 30, 30, 0.95);
+  color: white;
+  padding: 10px 15px;
+  border-radius: 5px;
+  border: 1px solid var(--primary-color);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+  font-size: 16px;
+  max-width: 400px;
+  word-wrap: break-word;
+  z-index: 2000;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.popup-close-btn {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  background-color: transparent;
+  color: white;
+  border: none;
+  font-size: 18px;
+  line-height: 1;
+  padding: 2px 6px;
+  cursor: pointer;
+  margin: 0;
+  border-radius: 50%;
+  box-shadow: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+.popup-close-btn:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+  transform: none;
+}
+
+.popup-content {
+  padding-right: 20px;
+  padding-top: 5px;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.score-confirmation {
+  margin: 20px auto;
+  padding: 15px;
+  background-color: rgba(0, 0, 0, 0.6);
+  border-radius: 8px;
+  font-size: 24px;
+  font-weight: bold;
+  text-align: center;
+  animation: bounceIn 0.8s ease;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+  max-width: 400px;
+}
+
+.gold-rank {
+  color: gold;
+  background-color: rgba(255, 215, 0, 0.2);
+  border: 2px solid gold;
+  text-shadow: 0 0 10px rgba(255, 215, 0, 0.7);
+}
+
+.silver-rank {
+  color: silver;
+  background-color: rgba(192, 192, 192, 0.2);
+  border: 2px solid silver;
+  text-shadow: 0 0 10px rgba(192, 192, 192, 0.7);
+}
+
+.bronze-rank {
+  color: #cd7f32;
+  background-color: rgba(205, 127, 50, 0.2);
+  border: 2px solid #cd7f32;
+  text-shadow: 0 0 10px rgba(205, 127, 50, 0.7);
+}
+
+@keyframes bounceIn {
+  0% {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+  70% {
+    transform: scale(0.95);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.close-gameover-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background-color: rgba(255, 0, 0, 0.3);
+  color: white;
+  border: none;
+  font-size: 24px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin: 0;
+  box-shadow: none;
+  transition: background-color 0.2s;
+  z-index: 20;
+}
+
+.close-gameover-btn:hover {
+  background-color: rgba(255, 0, 0, 0.6);
+  transform: none;
+}
+
+.close-gameover-btn:active {
+  background-color: rgba(255, 0, 0, 0.8);
+  transform: none;
+}
+
+.highscore-wrapper {
+  position: relative;
+  margin: 15px 0;
+  width: 100%;
+}
+
+/* Behold bare stilen for lukkeknappen i highscore-modal */
+.highscore-modal .close-highscore-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background-color: transparent;
+  border: none;
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  z-index: 25;
 }

@@ -1,3 +1,16 @@
+/**
+ * SPARKESYKKEL-SPILL
+ * 
+ * Dette er hovedfilen for sparkesykkelspillet. Den inneholder all spillogikk, grafikk og kontroll.
+ * 
+ * Hovedkomponenter:
+ * - Spilløkken: Sykkel, hindringer, kollisjonsdetektering
+ * - Tegnerutiner: Vei, kjøretøy, effekter
+ * - Beruselseseffekter: Glitch, kamerasjaking, veiforvrengning
+ * - Lydeffekter
+ * - Poeng og power-ups
+ */
+
 document.addEventListener('DOMContentLoaded', () => {
   try {
     const canvas = document.getElementById('gameCanvas');
@@ -12,27 +25,27 @@ document.addEventListener('DOMContentLoaded', () => {
     canvas.width = canvas.offsetWidth;
     canvas.height = canvas.offsetHeight;
 
-    // Spillvariabler
+    // *** SPILLVARIABLER ***
     let gameRunning = false;
     let gameOver = false;
     let score = 0;
     let highScore = localStorage.getItem('highScore') ? parseInt(localStorage.getItem('highScore')) : 0;
     let animationId;
-    let obstacleSpeed = 7; // Increased from 5 to 7
-    let obstacleFrequency = 80; // Reduced from 100 to 80
+    let obstacleSpeed = 7; // Økt fra 5 til 7
+    let obstacleFrequency = 80; // Redusert fra 100 til 80
     let frameCount = 0;
-    let debugMode = false; // Set to true to see hitboxes
+    let debugMode = false; // Sett til true for å se kollisjonsområder
     
-    // Drunk driving variables
-    let isDrunk = true; // Keep true to enable the system
-    let drunkLevel = 0; // Start completely sober (0)
+    // *** BERUSELSES-VARIABLER ***
+    let isDrunk = true; // Hold true for å aktivere systemet
+    let drunkLevel = 0; // Start helt edru (0)
     let swayAngle = 0;
     let visionBlur = 0;
     let lastRandomDirection = 0;
     let randomDirectionTimer = 0;
-    let lastScoreThreshold = 0; // Track when to increase drunk level
+    let lastScoreThreshold = 0; // Spor når beruselsesnivået skal økes
 
-    // Ytterligere innstillinger
+    // *** TILLEGGSINNSTILLINGER ***
     let timeOfDay = 25; 
     let dayNightCycle = false;
     let weather = 'clear'; 
@@ -41,12 +54,12 @@ document.addEventListener('DOMContentLoaded', () => {
     let dynamicCameraEnabled = false;
     let usePlayerImage = true;
     
-    // Initialize arrays
-    let obstacles = [];
-    let collectibles = [];
-    let activePowerUps = [];
-    let powerUpEffects = []; // Array to store active power-up effects
-    let wheelTracks = [];
+    // *** ARRAY-INITIALISERINGER ***
+    let obstacles = [];         // Hindringer (biler, fotgjengere)
+    let collectibles = [];      // Gjenstander som kan samles
+    let activePowerUps = [];    // Aktive power-ups
+    let powerUpEffects = [];    // Array for å lagre aktive power-up effekter
+    let wheelTracks = [];       // Hjulspor
 
     // Road-linjer for bakgrunnen
     const roadLines = [];
@@ -79,7 +92,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const sidewalkWidth = Math.min(40, leftEdge * 0.8);
 
       // Tegn bakkeområde (gress) - forenklet
-      ctx.fillStyle = '#388E3C';
+      ctx.fillStyle = '#4CAF50'; // Lysere grønn bakgrunn (var #388E3C)
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       // Apply drunk road distortion
@@ -92,8 +105,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // Adjust drawing
         ctx.save();
         
-        // Draw distorted road surface
-        ctx.fillStyle = '#424242';
+        // Draw distorted road surface - lysere vei når beruset
+        ctx.fillStyle = '#9E9E9E'; // Enda lysere grå (var #757575)
         ctx.beginPath();
         
         // Left edge with distortion
@@ -159,8 +172,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         // Draw distorted road boundaries
-        ctx.strokeStyle = '#FFEB3B';
-        ctx.lineWidth = 3;
+        ctx.strokeStyle = '#FFC107'; // Mer synlig gul
+        ctx.lineWidth = 4; // Tykkere linjer
         
         // Left boundary
         ctx.beginPath();
@@ -190,11 +203,11 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         // Normal road rendering (no distortion)
         // Tegn vei - nå fra topp til bunn
-        ctx.fillStyle = '#424242';
+        ctx.fillStyle = '#9E9E9E'; // Enda lysere grå (var #757575)
         ctx.fillRect(leftEdge, 0, roadWidth, canvas.height);
 
         // Tegn fortau - nå fra topp til bunn
-        ctx.fillStyle = '#BDBDBD';
+        ctx.fillStyle = '#E0E0E0'; // Lysere fortau (var #BDBDBD)
         ctx.fillRect(leftEdge - sidewalkWidth, 0, sidewalkWidth, canvas.height);
         ctx.fillRect(leftEdge + roadWidth, 0, sidewalkWidth, canvas.height);
 
@@ -209,9 +222,9 @@ document.addEventListener('DOMContentLoaded', () => {
           ctx.fillRect(canvas.width / 2 - lineWidth / 2, y, lineWidth, lineHeight);
         }
 
-        // Tegn veigrensene med gule linjer
-        ctx.strokeStyle = '#FFEB3B';
-        ctx.lineWidth = 3;
+        // Tegn veigrensene med gule linjer - mer synlige
+        ctx.strokeStyle = '#FFC107'; // Mer synlig gul (var #FFEB3B)
+        ctx.lineWidth = 4; // Tykkere linjer (var 3)
         
         ctx.beginPath();
         ctx.moveTo(leftEdge, 0);
@@ -407,80 +420,80 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         ctx.restore();
       },
-      update(keys) {
-        // Update drunk-related values
+      update(keys, speedFactor) {
+        // Oppdater berulelsesrelaterte verdier
         if (isDrunk && drunkLevel > 0) {
-          // Higher frequency updates for swayAngle to improve responsiveness
-          swayAngle += 0.08; // Increased from 0.05 for sharper movement
+          // Hyppigere oppdateringer for svingevinkel for å forbedre responsivitet
+          swayAngle += 0.08 * speedFactor; // Økt fra 0.05 for skarpere bevegelse
           
-          // Only recalculate vision blur periodically
+          // Beregn kun synsforstyrrelser med jevne mellomrom
           if (frameCount % 5 === 0) {
             visionBlur = 3 + Math.sin(Math.floor(frameCount * 0.03)) * 2 * drunkLevel;
           }
           
-          // Randomly change direction when drunk, with higher intensity
+          // Endrer tilfeldig retning når beruset, med høyere intensitet
           randomDirectionTimer--;
           if (randomDirectionTimer <= 0) {
-            // Stronger random direction changes (increased multiplier)
-            lastRandomDirection = (Math.random() - 0.5) * drunkLevel * 3; // Increased from 2 to 3
-            // Shorter time between random direction changes for more erratic movement
-            randomDirectionTimer = Math.floor(Math.random() * 40) + 20; // Reduced from 80+50 to 40+20
+            // Sterkere tilfeldige retningsendringer
+            lastRandomDirection = (Math.random() - 0.5) * drunkLevel * 3; // Økt fra 2 til 3
+            // Kortere tid mellom tilfeldige retningsendringer for mer uforutsigbar bevegelse
+            randomDirectionTimer = Math.floor(Math.random() * 40) + 20; // Redusert fra 80+50 til 40+20
           }
         }
           
-        // Faster deceleration for more responsive controls
+        // Raskere nedbremsing for mer responsiv kontroll
         this.speedX *= 0.85;
         this.speedY *= 0.85;
         
-        // Normal controls, but affected by drunkLevel
+        // Normale kontroller, men påvirket av beruselsesnivå
         if ((keys.ArrowLeft || keys.a) && this.x > this.width / 2) {
-          this.speedX -= 0.8; // Increased from 0.5 for faster response
+          this.speedX -= 0.8 * speedFactor; // Økt fra 0.5 for raskere respons
           this.targetTilt = -0.2;
           
-          // Drunk effects make controls more erratic and responsive
+          // Beruselseseffekter gjør kontrollene mer uforutsigbare og responsive
           if (isDrunk && drunkLevel > 0) {
-            // More responsive random calculations
-            this.speedX += (Math.random() - 0.7) * drunkLevel * 1.5; // Increased from 1.0 to 1.5
-            this.targetTilt = -0.2 - Math.random() * drunkLevel * 0.3; // Increased from 0.2 to 0.3
+            // Mer responsive tilfeldige beregninger
+            this.speedX += (Math.random() - 0.7) * drunkLevel * 1.5; // Økt fra 1.0 til 1.5
+            this.targetTilt = -0.2 - Math.random() * drunkLevel * 0.3; // Økt fra 0.2 til 0.3
           }
         }
         if ((keys.ArrowRight || keys.d) && this.x < canvas.width - this.width / 2) {
-          this.speedX += 0.8; // Increased from 0.5 for faster response
+          this.speedX += 0.8 * speedFactor; // Økt fra 0.5 for raskere respons
           this.targetTilt = 0.2;
           
-          // Drunk effects for right movement
+          // Beruselseseffekter for høyrebevegelse
           if (isDrunk && drunkLevel > 0) {
-            this.speedX += (Math.random() - 0.3) * drunkLevel * 1.5; // Increased from 1.0 to 1.5
-            this.targetTilt = 0.2 + Math.random() * drunkLevel * 0.3; // Increased from 0.2 to 0.3
+            this.speedX += (Math.random() - 0.3) * drunkLevel * 1.5; // Økt fra 1.0 til 1.5
+            this.targetTilt = 0.2 + Math.random() * drunkLevel * 0.3; // Økt fra 0.2 til 0.3
           }
         }
         if (!(keys.ArrowLeft || keys.a || keys.ArrowRight || keys.d)) {
           this.targetTilt = 0;
         }
         if ((keys.ArrowUp || keys.w) && this.y > this.height / 2) {
-          this.speedY -= 0.8; // Increased from 0.5 for faster response
+          this.speedY -= 0.8 * speedFactor; // Økt fra 0.5 for raskere respons
           
-          // Drunk effects for up movement
+          // Beruselseseffekter for oppover-bevegelse
           if (isDrunk && drunkLevel > 0) {
-            this.speedY += (Math.random() - 0.7) * drunkLevel * 1.3; // Increased from 1.0 to 1.3
-            this.speedX += (Math.random() - 0.5) * drunkLevel * 0.8; // Increased from 0.5 to 0.8
+            this.speedY += (Math.random() - 0.7) * drunkLevel * 1.3; // Økt fra 1.0 til 1.3
+            this.speedX += (Math.random() - 0.5) * drunkLevel * 0.8; // Økt fra 0.5 til 0.8
           }
         }
         if ((keys.ArrowDown || keys.s) && this.y < canvas.height - this.height / 2) {
-          this.speedY += 0.8; // Increased from 0.5 for faster response
+          this.speedY += 0.8 * speedFactor; // Økt fra 0.5 for raskere respons
           
-          // Drunk effects for down movement
+          // Beruselseseffekter for nedover-bevegelse
           if (isDrunk && drunkLevel > 0) {
-            this.speedY += (Math.random() - 0.3) * drunkLevel * 1.3; // Increased from 1.0 to 1.3
-            this.speedX += (Math.random() - 0.5) * drunkLevel * 0.8; // Increased from 0.5 to 0.8
+            this.speedY += (Math.random() - 0.3) * drunkLevel * 1.3; // Økt fra 1.0 til 1.3
+            this.speedX += (Math.random() - 0.5) * drunkLevel * 0.8; // Økt fra 0.5 til 0.8
           }
         }
         
-        // Apply random steering when drunk, even without input
+        // Bruk tilfeldig styring når beruset, selv uten input
         if (isDrunk && drunkLevel > 0) {
-          // Apply sharper random steering
-          this.speedX += lastRandomDirection * 0.3 * drunkLevel; // Increased from 0.2 to 0.3
-          this.speedY += (Math.random() - 0.5) * drunkLevel * 0.5; // Increased from 0.3 to 0.5
+          // Bruk skarpere tilfeldig styring
+          this.speedX += lastRandomDirection * 0.3 * drunkLevel; // Økt fra 0.2 til 0.3
+          this.speedY += (Math.random() - 0.5) * drunkLevel * 0.5; // Økt fra 0.3 til 0.5
         }
         
         // Faster tilt response even when drunk
@@ -608,13 +621,13 @@ document.addEventListener('DOMContentLoaded', () => {
         steeringCooldown: 0,
         moveTowardPlayer: type.name === 'cyclist',
         inCollision: false,
-        update() {
+        update(speedFactor = 1) {
           if (this.inCollision && this.type === 'pedestrian') return;
 
-          this.y += this.speed;
+          this.y += this.speed * speedFactor;
           
           if (this.bobAmount > 0) {
-            this.y += Math.sin(this.animationPhase) * this.bobAmount;
+            this.y += Math.sin(this.animationPhase) * this.bobAmount * speedFactor;
           }
           
           if (this.isCar || this.type === 'cyclist') {
@@ -628,7 +641,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const playerX = player.x;
                 const diffX = playerX - this.x;
                 
-                this.x += diffX * 0.03;
+                this.x += diffX * 0.03 * speedFactor;
                 
                 this.steeringDirection = diffX > 0 ? 0.5 : -0.5;
                 
@@ -640,8 +653,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.lane = Math.floor((this.x - leftEdge) / laneWidth);
               }
             } else {
-              if (this.steeringCooldown > 0) this.steeringCooldown--;
-              if (this.steeringCooldown <= 0 && Math.random() < 0.01) {
+              if (this.steeringCooldown > 0) this.steeringCooldown -= speedFactor;
+              if (this.steeringCooldown <= 0 && Math.random() < 0.01 * speedFactor) {
                 const possibleDirections = [];
                 if (this.lane > 0) possibleDirections.push(-1);
                 if (this.lane < 2) possibleDirections.push(1);
@@ -657,7 +670,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (targetLane >= 0 && targetLane <= 2) {
                   const targetX = leftEdge + (targetLane * laneWidth) + (laneWidth / 2);
                   const steeringSpeed = this.type === 'cyclist' ? 0.03 : 0.05;
-                  this.x += (targetX - this.x) * steeringSpeed;
+                  this.x += (targetX - this.x) * steeringSpeed * speedFactor;
                   if (Math.abs(this.x - targetX) < 5) {
                     this.lane = targetLane;
                     this.steeringDirection = 0;
@@ -671,6 +684,15 @@ document.addEventListener('DOMContentLoaded', () => {
               this.x = Math.max(minX, Math.min(this.x, maxX));
             }
           }
+          
+          // Sjekk om bilen passerer nær spilleren og spill en lyd
+          if (!this.hasPlayedPassingSound && this.isCar && 
+              this.y > canvas.height * 0.3 && this.y < canvas.height * 0.7 && 
+              gameRunning) {
+            playSoundEffect('carPassing');
+            this.hasPlayedPassingSound = true;
+          }
+          
           return this.y > canvas.height + this.height;
         },
         draw() {
@@ -1104,6 +1126,24 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     window.addEventListener('keydown', (e) => {
+      // Ikke fang tastetrykk hvis et input-felt har fokus
+      if (document.activeElement && document.activeElement.tagName === 'INPUT') {
+        return; // La nettleseren håndtere tastetrykket
+      }
+      
+      // Sjekk også for tekstområder som ikke er playerName
+      if (document.activeElement && document.activeElement.tagName === 'TEXTAREA' && 
+          document.activeElement.id !== 'playerName') {
+        return; // La nettleseren håndtere tastetrykket
+      }
+      
+      // Spesialtilfelle: Hvis vi er i playerName tekstfelt, tillat WASD for spilling
+      // men tillat fortsatt skriving av bokstavene w, a, s, d
+      if (document.activeElement && document.activeElement.id === 'playerName') {
+        // La nettleseren fortsette å håndtere inputen for tekstfeltet
+        return;
+      }
+      
       const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
       if (keys.hasOwnProperty(key)) {
         keys[key] = true;
@@ -1119,6 +1159,24 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     window.addEventListener('keyup', (e) => {
+      // Ikke fang tastetrykk hvis et input-felt har fokus
+      if (document.activeElement && document.activeElement.tagName === 'INPUT') {
+        return; // La nettleseren håndtere tastetrykket
+      }
+      
+      // Sjekk også for tekstområder som ikke er playerName
+      if (document.activeElement && document.activeElement.tagName === 'TEXTAREA' && 
+          document.activeElement.id !== 'playerName') {
+        return; // La nettleseren håndtere tastetrykket
+      }
+      
+      // Spesialtilfelle: Hvis vi er i playerName tekstfelt, tillat WASD for spilling
+      // men tillat fortsatt skriving av bokstavene w, a, s, d
+      if (document.activeElement && document.activeElement.id === 'playerName') {
+        // La nettleseren fortsette å håndtere inputen for tekstfeltet
+        return;
+      }
+      
       const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
       if (keys.hasOwnProperty(key)) {
         keys[key] = false;
@@ -1168,6 +1226,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let isGlitching = false;
     let glitchOffsetX = 0;
     let glitchOffsetY = 0;
+    let lastGreenFlashTime = 0; // For å spore når siste grønne flash begynte
+    let isGreenFlashing = false; // For å indikere om grønn flash er aktiv
 
     // Add screen "tug" and zoom effect that gets stronger with drunk level
     function applyDrunkScreenEffects() {
@@ -1197,9 +1257,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // Draw the road and objects
         drawRoad();
         
-        // Semi-transparent overlay
-        ctx.fillStyle = `rgba(255, 150, 50, ${0.1 * drunkLevel})`;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        // Semi-transparent overlay - fjernet
+        // ctx.fillStyle = `rgba(255, 150, 50, ${0.1 * drunkLevel})`;
+        // ctx.fillRect(0, 0, canvas.width, canvas.height);
         
         ctx.restore();
         return true; // Skip normal rendering
@@ -1232,8 +1292,23 @@ document.addEventListener('DOMContentLoaded', () => {
       return false;
     }
 
-    function gameLoop() {
+    // *** HOVED-SPILLØKKE ***
+    // Hovedfunksjonen som kjører spillet, oppdaterer alle objekter,
+    // tegner alle elementer og håndterer kollisjoner
+    let lastTimestamp = 0;
+    const targetFPS = 60;
+    const timeStep = 1000 / targetFPS;
+
+    function gameLoop(timestamp) {
       if (!gameRunning) return;
+      
+      // Beregn tidsdifferanse for jevn bevegelse uavhengig av skjerm
+      if (!lastTimestamp) lastTimestamp = timestamp;
+      const deltaTime = timestamp - lastTimestamp;
+      lastTimestamp = timestamp;
+      
+      // Juster bevegelseshastighet basert på faktisk oppdateringsrate
+      const speedFactor = Math.min(deltaTime / timeStep, 2.0);
       
       // Make sure we always start with a clean state
       if (frameCount === 0) {
@@ -1314,7 +1389,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (skipNormalRendering) {
           // If we already rendered, just apply the rest of the game logic
           // but skip re-rendering the background
-          player.update(keys);
+          player.update(keys, speedFactor);
           player.draw();
           
           // Make sure we restore the canvas state before continuing
@@ -1328,19 +1403,56 @@ document.addEventListener('DOMContentLoaded', () => {
           return;
         }
         
+        // Grønn flash-effekt hver 7 sekunder (420 frames ved 60 fps)
+        // Flash varer i 2 sekunder (120 frames)
+        const flashDuration = 120; // 2 sekunder ved 60 fps
+        const flashInterval = 420; // 7 sekunder totalt (2 sek flash + 5 sek pause)
+        
+        if (!isGreenFlashing && frameCount - lastGreenFlashTime > flashInterval) {
+          // Start en ny flash
+          isGreenFlashing = true;
+          lastGreenFlashTime = frameCount;
+        } else if (isGreenFlashing && frameCount - lastGreenFlashTime > flashDuration) {
+          // Avslutt flash etter 2 sekunder
+          isGreenFlashing = false;
+        }
+        
+        // Hvis flash er aktiv, tegn en semi-transparent hvit overlay, men mer transparent
+        if (isGreenFlashing && drunkLevel > 0.3) {
+          ctx.save();
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.1)'; // Mer transparent (0.1 i stedet for 0.2)
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.restore();
+        }
+        
         // Only apply visual effects when drunk level is significant
         // No blur filter - it's too performance intensive
         // ctx.filter = `blur(${Math.min(2, visionBlur * drunkLevel)}px)`;
         
-        // Simpler overlay effect 
-        ctx.fillStyle = `rgba(255, 230, 150, ${drunkLevel * 0.08})`;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        // Fjernet overlayet helt
+        // ctx.fillStyle = `rgba(255, 230, 150, ${drunkLevel * 0.01})`;
+        // ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Erstatt med mer synlige men kortvarige glitch/flash effekter
+        if (Math.random() < drunkLevel * 0.15) {
+          ctx.save();
+          // Tilfeldig fargevalg for glitch
+          const colors = ['rgba(255, 50, 50, 0.1)', 'rgba(50, 50, 255, 0.1)'];
+          ctx.fillStyle = colors[Math.floor(Math.random() * colors.length)];
+          
+          // Tegn bare en del av skjermen for å ikke blokkere hele visningen
+          const glitchHeight = canvas.height * 0.2;
+          const glitchY = Math.random() * (canvas.height - glitchHeight);
+          ctx.fillRect(0, glitchY, canvas.width, glitchHeight);
+          ctx.restore();
+        }
         
         // Double vision with less intensity - only for higher drunk levels
         if (drunkLevel > 0.4) {
-          const doubleVisionOffset = Math.sin(Math.floor(frameCount * 0.02)) * drunkLevel * 2;
+          const doubleVisionOffset = Math.sin(Math.floor(frameCount * 0.02)) * drunkLevel * 1.5;
           ctx.save();
-          ctx.globalAlpha = 0.15 * drunkLevel;
+          // Redusert alpha for dobbeltvisjon
+          ctx.globalAlpha = 0.08 * drunkLevel;
           ctx.translate(doubleVisionOffset, 0);
         }
         
@@ -1376,8 +1488,8 @@ document.addEventListener('DOMContentLoaded', () => {
           ctx.drawImage(canvas, glitchOffsetX, glitchOffsetY);
           ctx.restore();
           
-          // Occasionally add color channel offset
-          if (Math.random() < 0.3) {
+          // Øk hyppigheten av fargekanal-forskyvning
+          if (Math.random() < 0.7) {
             ctx.save();
             ctx.globalCompositeOperation = 'screen';
             ctx.fillStyle = 'rgba(255, 0, 0, 0.1)';
@@ -1386,6 +1498,15 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         } else {
           isGlitching = false;
+        }
+        
+        // Øk hyppigheten av glitch-effekter
+        if (drunkLevel > 0.3 && Math.random() < drunkLevel * 0.1) {
+          isGlitching = true;
+          lastGlitchTime = frameCount;
+          glitchIntensity = Math.random() * drunkLevel * 3;
+          glitchOffsetX = (Math.random() - 0.5) * glitchIntensity * 30;
+          glitchOffsetY = (Math.random() - 0.5) * glitchIntensity * 15;
         }
       }
       
@@ -1396,7 +1517,7 @@ document.addEventListener('DOMContentLoaded', () => {
       
       // Make the screen edges wavy when drunk - intensity based on drunk level
       // Only for higher drunk levels and reduced complexity
-      if (drunkLevel > 0.4 && frameCount % 3 === 0) { // Only render every 3rd frame
+      if (false) { // Deaktiverer bølgende linjer som kan blokkere sikten
         ctx.save();
         ctx.strokeStyle = `rgba(255, 220, 150, ${drunkLevel * 0.15})`;
         ctx.lineWidth = 10 * drunkLevel;
@@ -1452,7 +1573,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (frameCount % 200 === 0) {
         collectibles.push(createCollectible());
       }
-      player.update(keys);
+      player.update(keys, speedFactor);
       player.draw();
       
       // Draw player hitbox in debug mode
@@ -1489,18 +1610,22 @@ document.addEventListener('DOMContentLoaded', () => {
       // Process obstacles with optimized collision detection
       for (let i = obstacles.length - 1; i >= 0; i--) {
         const obstacle = obstacles[i];
-        const isOffScreen = obstacle.update();
+        const isOffScreen = obstacle.update(speedFactor);
         if (isOffScreen) {
           obstacles.splice(i, 1);
-          score++;
-          scoreDisplay.textContent = score;
           
-          // Vis melding ved poengmilepæler
-          if (score % 20 === 0) {
-            showMessage(`Vanskelighetsgrad øker! ${score} poeng`, 90);
-            // Kort kameraskjelv som indikerer økt vanskelighetsgrad
-            if (cameraShakeEnabled) {
-              cameraShake = 3;
+          // Add to score when obstacle is successfully avoided
+          if (!obstacle.crashed) {
+            score += 1;
+            scoreDisplay.textContent = score;
+            
+            // Vis melding ved poengmilepæler
+            if (score % 20 === 0) {
+              showMessage(`Vanskelighetsgrad øker! ${score} poeng`, 90);
+              // Kort kameraskjelv som indikerer økt vanskelighetsgrad
+              if (cameraShakeEnabled) {
+                cameraShake = 3;
+              }
             }
           }
         } else {
@@ -1552,7 +1677,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // Process collectibles
       for (let i = collectibles.length - 1; i >= 0; i--) {
         const collectible = collectibles[i];
-        const isOffScreen = collectible.update();
+        const isOffScreen = collectible.update(speedFactor);
         if (isOffScreen) {
           collectibles.splice(i, 1);
         } else {
@@ -1581,7 +1706,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // Process and draw power-up effects
       for (let i = powerUpEffects.length - 1; i >= 0; i--) {
         const effect = powerUpEffects[i];
-        const active = effect.update();
+        const active = effect.update(speedFactor);
         if (active) {
           effect.draw();
         } else {
@@ -1614,7 +1739,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Different messages based on drunk level
         let drunkMessage = '';
-        if (drunkLevel >= 0.7) {
+        if (drunkLevel >= 1.0) {
           drunkMessage = '🍺🍺🍺 DRITINGS!';
         } else if (drunkLevel >= 0.5) {
           drunkMessage = '🍺🍺 PÅ EN SNURR!';
@@ -2393,11 +2518,27 @@ document.addEventListener('DOMContentLoaded', () => {
       // Play game over sound
       playSoundEffect('gameOver');
       
-      // Check if we achieved a new high score
-      const isNewHighScore = updateHighScore();
+      // Sjekk highscore
+      const isNewHighScore = score > highScore;
+      const isNewTopTen = isTopTen(score);
+      
+      // Oppdater high score uansett
+      if (isNewHighScore) {
+        highScore = score;
+        localStorage.setItem('highScore', highScore);
+        highScoreDisplay.textContent = highScore;
+      }
       
       const gameOverDiv = document.createElement('div');
       gameOverDiv.className = 'game-over';
+      
+      // Legg til lukke-knapp
+      const closeBtn = document.createElement('button');
+      closeBtn.className = 'close-gameover-btn';
+      closeBtn.textContent = '×';
+      closeBtn.addEventListener('click', () => {
+        gameOverDiv.remove();
+      });
       
       const heading = document.createElement('h2');
       heading.textContent = 'GAME OVER!';
@@ -2409,22 +2550,130 @@ document.addEventListener('DOMContentLoaded', () => {
       const highScoreInfo = document.createElement('p');
       highScoreInfo.textContent = `High Score: ${highScore}`;
       
-      // Add new high score message if achieved
-      if (isNewHighScore) {
-        const newHighScoreMessage = document.createElement('p');
-        newHighScoreMessage.className = 'new-high-score';
-        newHighScoreMessage.textContent = 'NY HIGH SCORE!';
-        gameOverDiv.appendChild(newHighScoreMessage);
-      }
-      
-      const safetyTip = document.createElement('p');
-      safetyTip.className = 'safety-tip';
-      safetyTip.textContent = getRandomSafetyTip();
-      
+      gameOverDiv.appendChild(closeBtn);
       gameOverDiv.appendChild(heading);
       gameOverDiv.appendChild(scoreInfo);
       gameOverDiv.appendChild(highScoreInfo);
-      gameOverDiv.appendChild(safetyTip);
+      
+      // Legg til navneinput hvis ny topp 10-score
+      if (isNewTopTen) {
+        const nameForm = document.createElement('div');
+        nameForm.className = 'name-input-container';
+        
+        const nameLabel = document.createElement('label');
+        nameLabel.setAttribute('for', 'playerName');
+        nameLabel.textContent = 'Skriv inn navnet ditt:';
+        
+        const nameInput = document.createElement('textarea');
+        nameInput.setAttribute('id', 'playerName');
+        nameInput.setAttribute('placeholder', 'Ditt navn');
+        nameInput.setAttribute('rows', '3');
+        nameInput.setAttribute('maxlength', '100'); // Setter høy maksgrense
+        nameInput.setAttribute('data-lpignore', 'true'); // Ignorerer LastPass autofyll
+        nameInput.style.resize = 'vertical';
+        nameInput.style.maxHeight = '150px';
+        nameInput.style.minHeight = '60px';
+        
+        // Auto-resize funksjon for tekstfeltet
+        nameInput.addEventListener('input', function() {
+          this.style.height = 'auto';
+          this.style.height = (this.scrollHeight) + 'px';
+        });
+        
+        // Legg til støtte for Enter-tasten
+        nameInput.addEventListener('keypress', (event) => {
+          if (event.key === 'Enter' && event.shiftKey === false) {
+            event.preventDefault();
+            // Bruk nameInput.value direkte uten trim
+            const playerName = nameInput.value || 'Anonym';
+            submitBtn.click();
+          }
+        });
+        
+        const submitBtn = document.createElement('button');
+        submitBtn.className = 'submit-name-btn';
+        submitBtn.textContent = 'Lagre Score';
+        
+        nameForm.appendChild(nameLabel);
+        nameForm.appendChild(nameInput);
+        nameForm.appendChild(submitBtn);
+        
+        gameOverDiv.appendChild(nameForm);
+        
+        // Sett fokus på input-feltet med en liten forsinkelse for å sikre at DOM-en er oppdatert
+        setTimeout(() => {
+          const inputField = document.getElementById('playerName');
+          if (inputField) {
+            inputField.focus();
+          }
+        }, 100);
+        
+        // Lagre highscore når brukeren sender inn
+        submitBtn.addEventListener('click', () => {
+          // Bruk const playerName = nameInput.value.trim() || 'Anonym'; 
+          // i stedet for å fjerne eventuell validering som filtrerer tegn
+          const playerName = nameInput.value || 'Anonym';
+          const savedHighscores = saveHighscore(playerName, score);
+          
+          // Sjekk om spilleren fikk en topplassering (topp 3)
+          const playerRank = savedHighscores.findIndex(entry => entry.name === playerName && entry.score === score) + 1;
+          
+          // Fjern inputfeltet
+          nameForm.remove();
+          
+          // Vis bekreftelsesmelding med animasjon
+          const confirmationMsg = document.createElement('div');
+          confirmationMsg.className = 'score-confirmation';
+          
+          let rankMessage = `Din score er lagret: ${score} poeng`;
+          
+          // Spesiell melding for topplasseringer
+          if (playerRank === 1) {
+            rankMessage = `🥇 FØRSTEPLASS! ${score} poeng`;
+            confirmationMsg.classList.add('gold-rank');
+          } else if (playerRank === 2) {
+            rankMessage = `🥈 ANDREPLASS! ${score} poeng`;
+            confirmationMsg.classList.add('silver-rank');
+          } else if (playerRank === 3) {
+            rankMessage = `🥉 TREDJEPLASS! ${score} poeng`;
+            confirmationMsg.classList.add('bronze-rank');
+          } else if (playerRank <= 10) {
+            rankMessage = `${playerRank}. PLASS! ${score} poeng`;
+          }
+          
+          confirmationMsg.textContent = rankMessage;
+          gameOverDiv.appendChild(confirmationMsg);
+          
+          // Vis highscores etter kort forsinkelse
+          setTimeout(() => {
+            // Lag en wrapper for highscore uten lukkeknapp
+            const highscoreWrapper = document.createElement('div');
+            highscoreWrapper.className = 'highscore-wrapper';
+            
+            // Vis highscores i wrapperen direkte uten lukkeknapp
+            showHighscores(highscoreWrapper);
+            
+            // Legg til wrapperen i game-over-vinduet
+            gameOverDiv.appendChild(highscoreWrapper);
+          }, 1500);
+        });
+      } else {
+        // Add safety tip
+        const safetyTip = document.createElement('p');
+        safetyTip.className = 'safety-tip';
+        safetyTip.textContent = getRandomSafetyTip();
+        gameOverDiv.appendChild(safetyTip);
+        
+        // Lag en wrapper for highscore uten lukkeknapp
+        const highscoreWrapper = document.createElement('div');
+        highscoreWrapper.className = 'highscore-wrapper';
+        
+        // Vis highscores i wrapperen direkte uten lukkeknapp
+        showHighscores(highscoreWrapper);
+        
+        // Legg til wrapperen i game-over-vinduet
+        gameOverDiv.appendChild(highscoreWrapper);
+      }
       
       const container = document.querySelector('.game-container');
       container.appendChild(gameOverDiv);
@@ -2434,6 +2683,36 @@ document.addEventListener('DOMContentLoaded', () => {
 
     startBtn.addEventListener('click', startGame);
     restartBtn.addEventListener('click', startGame);
+    
+    // Highscore-knapp funksjonalitet
+    const highscoreBtn = document.getElementById('highscoreBtn');
+    highscoreBtn.addEventListener('click', () => {
+      // Hvis det finnes en eksisterende highscore-visning, fjern den først
+      const existingHighscoreList = document.querySelector('.highscore-modal');
+      if (existingHighscoreList) {
+        existingHighscoreList.remove();
+        return;
+      }
+      
+      // Lag en modal for highscore-listen
+      const modal = document.createElement('div');
+      modal.className = 'highscore-modal';
+      
+      // Lag en lukke-knapp
+      const closeBtn = document.createElement('button');
+      closeBtn.className = 'close-highscore-btn';
+      closeBtn.textContent = '×';
+      closeBtn.addEventListener('click', () => modal.remove());
+      
+      modal.appendChild(closeBtn);
+      
+      // Vis highscores i modalen
+      showHighscores(modal);
+      
+      // Legg til modalen i DOM
+      const container = document.querySelector('.game-container');
+      container.appendChild(modal);
+    });
 
     window.addEventListener('resize', () => {
       canvas.width = canvas.offsetWidth;
@@ -2707,9 +2986,26 @@ document.addEventListener('DOMContentLoaded', () => {
           ctx.restore();
           this.animationPhase += 0.1;
         },
-        update() {
-          this.y += this.speed;
-          return this.y > canvas.height + this.height;
+        update(speedFactor = 1) {
+          if (this.collected) return;
+          
+          this.rotation += 0.02 * speedFactor;
+          this.y += this.speed * speedFactor;
+          
+          // Gjør collectibles litt mer dynamiske ved å svinge sidelengs
+          if (this.swingFrequency > 0) {
+            this.x = this.initialX + Math.sin(this.y * this.swingFrequency) * this.swingAmplitude;
+          }
+          
+          // Hopp-effekt
+          if (this.bounceFrequency > 0) {
+            this.bounceOffset = Math.sin(this.y * this.bounceFrequency) * this.bounceAmplitude;
+          }
+          
+          // Animasjon av glød
+          this.glowSize = this.baseGlowSize + Math.sin(frameCount * 0.1 * speedFactor) * 2;
+          
+          return this.y > canvas.height + this.width;  // Returnerer true når objektet er utenfor skjermen
         }
       };
     }
@@ -2856,102 +3152,95 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       
       return {
+        x: player.x,
+        y: player.y,
         particles,
         active: true,
-        update() {
+        update(speedFactor = 1) {
           let stillActive = false;
           
-          for (const particle of this.particles) {
-            if (particle.life > 0) {
+          for (const p of this.particles) {
+            // Bruk speedFactor for å sikre jevn animasjon uavhengig av skjerm
+            p.life -= 1 * speedFactor;
+            p.alpha = p.life / 30;
+            p.size -= 0.1 * speedFactor;
+            
+            if (p.type === 'shield') {
+              const orbitSpeed = 0.03 * speedFactor;
+              p.angle += orbitSpeed;
+              p.x = player.x + Math.cos(p.angle) * (30 + Math.sin(frameCount * 0.1) * 5);
+              p.y = player.y + Math.sin(p.angle) * (30 + Math.sin(frameCount * 0.1) * 5);
+            } else {
+              // Regular power-up effects move upward
+              p.y -= p.speed * speedFactor;
+              p.x += (Math.random() - 0.5) * 0.5 * speedFactor;
+              p.rotation += p.rotationSpeed * speedFactor;
+            }
+            
+            if (p.life > 0 && p.size > 0) {
               stillActive = true;
-              
-              // Move particles outward
-              particle.x += Math.cos(particle.angle) * particle.speed;
-              particle.y += Math.sin(particle.angle) * particle.speed;
-              
-              // Rotate particles
-              particle.rotation += particle.rotationSpeed;
-              
-              // Reduce life and alpha
-              particle.life -= 1;
-              particle.alpha = particle.life / (isSmall ? 40 : 60);
-              
-              // Grow particle slightly then shrink
-              if (particle.life > (isSmall ? 30 : 40)) {
-                particle.size += 0.1;
-              } else {
-                particle.size *= 0.95;
-              }
             }
           }
           
           this.active = stillActive;
-          return this.active;
+          return stillActive;
         },
         draw() {
-          ctx.save();
-          
-          for (const particle of this.particles) {
-            if (particle.life <= 0) continue;
-            
-            ctx.save();
-            ctx.globalAlpha = particle.alpha;
-            ctx.translate(particle.x, particle.y);
-            ctx.rotate(particle.rotation);
-            
-            // Draw different shapes based on power-up type
-            ctx.fillStyle = particle.color;
-            
-            if (particle.type === 'shield') {
-              // Shield particles are small shields
-              ctx.beginPath();
-              ctx.arc(0, 0, particle.size / 2, 0, Math.PI, true);
-              ctx.lineTo(-particle.size / 2, 0);
-              ctx.lineTo(particle.size / 2, 0);
-              ctx.fill();
-            } else if (particle.type === 'speed') {
-              // Speed particles are lightning bolts
-              ctx.beginPath();
-              ctx.moveTo(0, -particle.size / 2);
-              ctx.lineTo(particle.size / 3, 0);
-              ctx.lineTo(0, particle.size / 2);
-              ctx.lineTo(-particle.size / 3, 0);
-              ctx.closePath();
-              ctx.fill();
-            } else if (particle.type === 'slowTime') {
-              // SlowTime particles are clock-like
-              ctx.beginPath();
-              ctx.arc(0, 0, particle.size / 2, 0, Math.PI * 2);
-              ctx.fill();
-              ctx.strokeStyle = '#fff';
-              ctx.lineWidth = 1;
-              ctx.beginPath();
-              ctx.moveTo(0, 0);
-              ctx.lineTo(0, -particle.size / 3);
-              ctx.stroke();
-            } else {
-              // Default particles are stars
-              ctx.beginPath();
-              for (let i = 0; i < 5; i++) {
-                const angle = (i * Math.PI * 2) / 5 - Math.PI / 2;
-                const length = i % 2 === 0 ? particle.size / 2 : particle.size / 4;
-                const x = Math.cos(angle) * length;
-                const y = Math.sin(angle) * length;
+          for (const p of this.particles) {
+            if (p.life > 0 && p.size > 0) {
+              ctx.save();
+              ctx.globalAlpha = p.alpha;
+              
+              if (p.type === 'shield') {
+                ctx.fillStyle = p.color;
+                ctx.strokeStyle = 'white';
+                ctx.lineWidth = 1;
                 
-                if (i === 0) {
-                  ctx.moveTo(x, y);
-                } else {
-                  ctx.lineTo(x, y);
-                }
+                ctx.translate(p.x, p.y);
+                ctx.rotate(p.rotation);
+                
+                ctx.beginPath();
+                ctx.arc(0, 0, p.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+              } else if (p.type === 'speed') {
+                ctx.fillStyle = p.color;
+                
+                ctx.translate(p.x, p.y);
+                ctx.rotate(p.rotation);
+                
+                // Draw lightning bolt shape
+                ctx.beginPath();
+                ctx.moveTo(0, -p.size);
+                ctx.lineTo(p.size / 2, -p.size / 3);
+                ctx.lineTo(0, p.size / 3);
+                ctx.lineTo(-p.size / 2, p.size);
+                ctx.closePath();
+                ctx.fill();
+              } else if (p.type === 'slowMotion') {
+                ctx.fillStyle = p.color;
+                
+                ctx.translate(p.x, p.y);
+                ctx.rotate(p.rotation);
+                
+                // Draw hourglass shape
+                ctx.beginPath();
+                ctx.moveTo(-p.size / 2, -p.size / 2);
+                ctx.lineTo(p.size / 2, -p.size / 2);
+                ctx.lineTo(-p.size / 2, p.size / 2);
+                ctx.lineTo(p.size / 2, p.size / 2);
+                ctx.closePath();
+                ctx.fill();
+              } else {
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
               }
-              ctx.closePath();
-              ctx.fill();
+              
+              ctx.restore();
             }
-            
-            ctx.restore();
           }
-          
-          ctx.restore();
         }
       };
     }
@@ -3058,7 +3347,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // If drunk, customize message based on drunk level
       if (isDrunk && drunkLevel > 0.1) {
         if (drunkLevel >= 0.6) {
-          return "Du var DRITINGS! I virkeligheten ville du blitt arrestert, mistet førerkortet, og fått høy bot!";
+          return "Å kjøre i beruset tilstand er farlig og ulovlig. I virkeligheten kan dette føre til alvorlige konsekvenser både for deg og andre.";
         } else if (drunkLevel >= 0.3) {
           return "Å kjøre sparkesykkel i beruset tilstand gir høy ulykkesrisiko og er ulovlig med straff på linje med promillekjøring!";
         } else {
@@ -3075,19 +3364,177 @@ document.addEventListener('DOMContentLoaded', () => {
         toggleSound();
       });
     }
+    
+    // Initialize clear data button
+    const clearDataBtn = document.getElementById('clearDataBtn');
+    if (clearDataBtn) {
+      clearDataBtn.addEventListener('click', () => {
+        // Vis bekreftelsesdialog
+        const confirmClear = confirm('Er du sikker på at du vil slette alle highscores og innstillinger? Dette kan ikke angres!');
+        
+        if (confirmClear) {
+          // Slett all data fra localStorage
+          localStorage.removeItem('highscores');
+          localStorage.removeItem('highScore');
+          localStorage.removeItem('darkMode');
+          
+          // Nullstill highscore variabelen og visningen
+          highScore = 0;
+          highScoreDisplay.textContent = '0';
+          
+          // Gjenopprett tom highscore-liste
+          localStorage.setItem('highscores', JSON.stringify([]));
+          
+          // Vis bekreftelsesmelding
+          showMessage('Alle lagrede data er slettet!', 3000);
+        }
+      });
+    }
 
     // Initialiser high score
     highScoreDisplay.textContent = highScore;
 
-    // Function to update high score
-    function updateHighScore() {
-      if (score > highScore) {
-        highScore = score;
-        localStorage.setItem('highScore', highScore);
-        highScoreDisplay.textContent = highScore;
-        return true;
+    // Initialiser highscores i localStorage hvis det ikke finnes
+    if (!localStorage.getItem('highscores')) {
+      localStorage.setItem('highscores', JSON.stringify([]));
+    }
+    
+    // Funksjon for å hente highscores
+    function getHighscores() {
+      return JSON.parse(localStorage.getItem('highscores') || '[]');
+    }
+    
+    // Funksjon for å lagre highscores
+    function saveHighscore(name, score) {
+      const highscores = getHighscores();
+      highscores.push({ name, score });
+      
+      // Sorter etter poeng (høyest først)
+      highscores.sort((a, b) => b.score - a.score);
+      
+      // Behold kun de 10 beste
+      const top10 = highscores.slice(0, 10);
+      
+      localStorage.setItem('highscores', JSON.stringify(top10));
+      return top10;
+    }
+    
+    // Sjekk om poengsum kvalifiserer for top 10
+    function isTopTen(score) {
+      const highscores = getHighscores();
+      if (highscores.length < 10) return true;
+      return score > highscores[highscores.length - 1].score;
+    }
+
+    // Funksjon for å vise top 10-liste
+    function showHighscores(container) {
+      const highscores = getHighscores();
+      
+      const highscoreList = document.createElement('div');
+      highscoreList.className = 'highscore-list';
+      
+      const heading = document.createElement('h3');
+      heading.textContent = 'Top 10 Poengsummer';
+      highscoreList.appendChild(heading);
+      
+      // Legg til en tabell-header med kolonner
+      const tableHeader = document.createElement('div');
+      tableHeader.className = 'highscore-header';
+      tableHeader.innerHTML = '<span class="rank-header">Rank</span><span class="name-header">Navn</span><span class="score-header">Poeng</span>';
+      highscoreList.appendChild(tableHeader);
+      
+      // Lag en tabellaktig visning i stedet for en liste
+      const table = document.createElement('div');
+      table.className = 'highscore-table';
+      
+      if (highscores.length === 0) {
+        const emptyMessage = document.createElement('div');
+        emptyMessage.className = 'no-scores';
+        emptyMessage.textContent = 'Ingen highscores ennå!';
+        table.appendChild(emptyMessage);
+      } else {
+        // Legg til en funksjon for å lukke alle aktive navnepopups
+        function closeAllNamePopups() {
+          document.querySelectorAll('.name-popup').forEach(popup => popup.remove());
+        }
+        
+        // Legg til click event listener på dokumentet for å lukke popups
+        document.addEventListener('click', function(e) {
+          if (!e.target.closest('.name-cell')) {
+            closeAllNamePopups();
+          }
+        });
+        
+        highscores.forEach((entry, index) => {
+          const row = document.createElement('div');
+          row.className = 'highscore-row';
+          if (index < 3) row.classList.add(`rank-${index+1}`);
+          
+          const rankCell = document.createElement('span');
+          rankCell.className = 'rank-cell';
+          rankCell.textContent = `${index + 1}.`;
+          
+          const nameCell = document.createElement('span');
+          nameCell.className = 'name-cell';
+          nameCell.textContent = entry.name;
+          
+          // For lange navn, legg til klikk-funksjonalitet
+          if (entry.name.length > 15) {
+            nameCell.classList.add('clickable-name');
+            nameCell.setAttribute('data-fullname', entry.name);
+            
+            // Legg til click handler
+            nameCell.addEventListener('click', function(e) {
+              e.stopPropagation();
+              
+              // Hvis det allerede finnes en popup, fjern den
+              closeAllNamePopups();
+              
+              // Opprett popup
+              const popup = document.createElement('div');
+              popup.className = 'name-popup';
+              
+              // Legg til X-lukkeknapp
+              const closeButton = document.createElement('button');
+              closeButton.className = 'popup-close-btn';
+              closeButton.innerHTML = '&times;';
+              closeButton.addEventListener('click', function(e) {
+                e.stopPropagation();
+                popup.remove();
+              });
+              
+              // Legg til innholdet (navnet)
+              const nameContent = document.createElement('div');
+              nameContent.className = 'popup-content';
+              nameContent.textContent = this.getAttribute('data-fullname');
+              
+              // Sett sammen popup
+              popup.appendChild(closeButton);
+              popup.appendChild(nameContent);
+              
+              // Posisjoner popup under navnet
+              const rect = this.getBoundingClientRect();
+              popup.style.top = `${rect.bottom + window.scrollY}px`;
+              popup.style.left = `${rect.left + window.scrollX}px`;
+              
+              document.body.appendChild(popup);
+            });
+          }
+          
+          const scoreCell = document.createElement('span');
+          scoreCell.className = 'score-cell';
+          scoreCell.textContent = entry.score;
+          
+          row.appendChild(rankCell);
+          row.appendChild(nameCell);
+          row.appendChild(scoreCell);
+          
+          table.appendChild(row);
+        });
       }
-      return false;
+      
+      highscoreList.appendChild(table);
+      container.appendChild(highscoreList);
     }
   } catch (error) {
     console.error('Game initialization error:', error);
