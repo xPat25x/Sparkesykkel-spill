@@ -1417,10 +1417,11 @@ document.addEventListener('DOMContentLoaded', () => {
           isGreenFlashing = false;
         }
         
-        // Hvis flash er aktiv, tegn en semi-transparent hvit overlay, men mer transparent
+        // Hvis flash er aktiv, tegn en lysere grønn overlay med høyere synlighet
         if (isGreenFlashing && drunkLevel > 0.3) {
           ctx.save();
-          ctx.fillStyle = 'rgba(255, 255, 255, 0.1)'; // Mer transparent (0.1 i stedet for 0.2)
+          // Lysere grønn farge men mer gjennomsiktig for bedre spillkontroll
+          ctx.fillStyle = 'rgba(180, 255, 180, 0.18)'; // Lysere grønn med balansert opacity
           ctx.fillRect(0, 0, canvas.width, canvas.height);
           ctx.restore();
         }
@@ -1436,8 +1437,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // Erstatt med mer synlige men kortvarige glitch/flash effekter
         if (Math.random() < drunkLevel * 0.15) {
           ctx.save();
-          // Tilfeldig fargevalg for glitch
-          const colors = ['rgba(255, 50, 50, 0.1)', 'rgba(50, 50, 255, 0.1)'];
+          // Tilfeldig fargevalg for glitch med høyere synlighet men mer gjennomsiktig
+          const colors = ['rgba(255, 130, 130, 0.18)', 'rgba(130, 130, 255, 0.18)']; // Lysere men mer gjennomsiktig
           ctx.fillStyle = colors[Math.floor(Math.random() * colors.length)];
           
           // Tegn bare en del av skjermen for å ikke blokkere hele visningen
@@ -1447,12 +1448,12 @@ document.addEventListener('DOMContentLoaded', () => {
           ctx.restore();
         }
         
-        // Double vision with less intensity - only for higher drunk levels
+        // Double vision with improved visibility - only for higher drunk levels
         if (drunkLevel > 0.4) {
           const doubleVisionOffset = Math.sin(Math.floor(frameCount * 0.02)) * drunkLevel * 1.5;
           ctx.save();
-          // Redusert alpha for dobbeltvisjon
-          ctx.globalAlpha = 0.08 * drunkLevel;
+          // Balansert alpha for dobbeltvisjon - synlig men ikke for forstyrrende
+          ctx.globalAlpha = 0.12 * drunkLevel; // Justert til en mer balansert verdi
           ctx.translate(doubleVisionOffset, 0);
         }
         
@@ -1481,18 +1482,18 @@ document.addEventListener('DOMContentLoaded', () => {
           glitchOffsetY = (Math.random() - 0.5) * glitchIntensity * 10;
         }
         
-        // Apply active glitch effect
+        // Apply active glitch effect with improved visibility
         if (isGlitching && frameCount - lastGlitchTime < 5) {
           ctx.save();
           ctx.globalCompositeOperation = 'difference';
           ctx.drawImage(canvas, glitchOffsetX, glitchOffsetY);
           ctx.restore();
           
-          // Øk hyppigheten av fargekanal-forskyvning
+          // Øk hyppigheten og synligheten av fargekanal-forskyvning
           if (Math.random() < 0.7) {
             ctx.save();
             ctx.globalCompositeOperation = 'screen';
-            ctx.fillStyle = 'rgba(255, 0, 0, 0.1)';
+            ctx.fillStyle = 'rgba(255, 80, 80, 0.15)'; // Lysere rødfarge men mer gjennomsiktig
             ctx.fillRect(glitchOffsetX, 0, canvas.width, canvas.height);
             ctx.restore();
           }
@@ -1617,14 +1618,14 @@ document.addEventListener('DOMContentLoaded', () => {
           // Add to score when obstacle is successfully avoided
           if (!obstacle.crashed) {
             score += 1;
-            scoreDisplay.textContent = score;
-            
-            // Vis melding ved poengmilepæler
-            if (score % 20 === 0) {
-              showMessage(`Vanskelighetsgrad øker! ${score} poeng`, 90);
-              // Kort kameraskjelv som indikerer økt vanskelighetsgrad
-              if (cameraShakeEnabled) {
-                cameraShake = 3;
+          scoreDisplay.textContent = score;
+          
+          // Vis melding ved poengmilepæler
+          if (score % 20 === 0) {
+            showMessage(`Vanskelighetsgrad øker! ${score} poeng`, 90);
+            // Kort kameraskjelv som indikerer økt vanskelighetsgrad
+            if (cameraShakeEnabled) {
+              cameraShake = 3;
               }
             }
           }
@@ -2659,10 +2660,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
       } else {
         // Add safety tip
-        const safetyTip = document.createElement('p');
-        safetyTip.className = 'safety-tip';
-        safetyTip.textContent = getRandomSafetyTip();
-        gameOverDiv.appendChild(safetyTip);
+      const safetyTip = document.createElement('p');
+      safetyTip.className = 'safety-tip';
+      safetyTip.textContent = getRandomSafetyTip();
+      gameOverDiv.appendChild(safetyTip);
         
         // Lag en wrapper for highscore uten lukkeknapp
         const highscoreWrapper = document.createElement('div');
@@ -2869,12 +2870,173 @@ document.addEventListener('DOMContentLoaded', () => {
         powerUpEffects.push(createPowerUpEffect(collectible.type, collectible.color));
       }
       
-      // Visual feedback
+      // Forbedret visuell feedback
+      // Flash-effekt på hele skjermen
       const flash = document.createElement('div');
       flash.className = 'powerup-collected';
       flash.style.backgroundColor = collectible.color + '50';
       document.querySelector('.game-container').appendChild(flash);
       setTimeout(() => flash.remove(), 500);
+      
+      // Legg til sjokkbølge-effekt på spillerenå
+      const shockwaveRadius = 40; // Reduced from 50
+      const shockwaveParticles = 8; // Reduced from 15
+      
+      // Create a single shockwave instead of multiple ones
+      const shockwaveEffect = {
+        x: collectible.x,
+        y: collectible.y,
+        radius: 5,
+        maxRadius: shockwaveRadius,
+        speed: 2.5,
+        alpha: 0.7,
+        color: collectible.color
+      };
+      
+      // Legg til animasjon for sjokkbølgen
+      const animateShockwave = () => {
+        if (shockwaveEffect.radius >= shockwaveEffect.maxRadius || !gameRunning) {
+          return;
+        }
+        
+        ctx.save();
+        ctx.globalAlpha = shockwaveEffect.alpha;
+        ctx.strokeStyle = shockwaveEffect.color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(shockwaveEffect.x, shockwaveEffect.y, shockwaveEffect.radius, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+        
+        shockwaveEffect.radius += shockwaveEffect.speed;
+        shockwaveEffect.alpha -= 0.035; // Faster fade out
+        
+        if (shockwaveEffect.alpha > 0) {
+          setTimeout(() => requestAnimationFrame(animateShockwave), 16); // Limit to ~60fps
+        }
+      };
+      
+      // Start with a slight delay to improve performance
+      setTimeout(() => animateShockwave(), 0);
+      
+      // Legg til en futuristisk/glass-effekt i stedet for bobleeffekt
+      // Lag en serie av polygoner som danner en krystalleffekt
+      const crystalEffect = () => {
+        const fragments = [];
+        const fragmentCount = 6; // Reduced from 8
+        
+        // Opprett krystallfragmenter
+        for (let i = 0; i < fragmentCount; i++) {
+          const angle = (i / fragmentCount) * Math.PI * 2;
+          const distance = 20 + Math.random() * 30;
+          
+          // Simplified points creation - pre-calculate points instead of dynamically
+          const pointCount = 5;
+          const points = [];
+          for (let j = 0; j < pointCount; j++) {
+            const pointAngle = (j / pointCount) * Math.PI * 2;
+            const pointDistance = (0.7 + Math.random() * 0.3); // Reduced randomness
+            points.push({
+              x: Math.cos(pointAngle) * pointDistance,
+              y: Math.sin(pointAngle) * pointDistance
+            });
+          }
+          
+          fragments.push({
+            x: collectible.x,
+            y: collectible.y,
+            targetX: collectible.x + Math.cos(angle) * distance,
+            targetY: collectible.y + Math.sin(angle) * distance,
+            size: 10 + Math.random() * 10, // Reduced size variation
+            alpha: 0.9,
+            rotation: Math.random() * Math.PI * 2,
+            rotationSpeed: (Math.random() - 0.5) * 0.1, // Reduced rotation speed
+            color: collectible.color,
+            points: points
+          });
+        }
+        
+        let frameCount = 0;
+        const maxFrames = 30; // Reduced animation frames
+        
+        const animateCrystals = () => {
+          if (frameCount >= maxFrames || !gameRunning) {
+            return;
+          }
+          
+          const progress = frameCount / maxFrames;
+          
+          ctx.save();
+          
+          // Tegn hvert krystallfragment
+          for (const fragment of fragments) {
+            const x = fragment.x + (fragment.targetX - fragment.x) * progress;
+            const y = fragment.y + (fragment.targetY - fragment.y) * progress;
+            
+            fragment.alpha = 0.9 * (1 - progress);
+            const currentSize = fragment.size * (1 - progress * 0.5);
+            
+            fragment.rotation += fragment.rotationSpeed;
+            
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(fragment.rotation);
+            ctx.scale(currentSize / 10, currentSize / 10);
+            
+            ctx.globalAlpha = fragment.alpha;
+            
+            // Simplified gradient with fewer color stops
+            const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, 10);
+            gradient.addColorStop(0, fragment.color);
+            gradient.addColorStop(1, fragment.color + '00'); // Fully transparent
+            
+            ctx.beginPath();
+            for (let i = 0; i < fragment.points.length; i++) {
+              const point = fragment.points[i];
+              if (i === 0) {
+                ctx.moveTo(point.x * 10, point.y * 10);
+              } else {
+                ctx.lineTo(point.x * 10, point.y * 10);
+              }
+            }
+            ctx.closePath();
+            
+            ctx.fillStyle = gradient;
+            ctx.fill();
+            
+            // Simplified highlight effect - just one highlight per fragment
+            ctx.globalAlpha = fragment.alpha * 0.5;
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.beginPath();
+            ctx.ellipse(-2, -2, 3, 2, Math.PI/4, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Thinner border for better performance
+            ctx.globalAlpha = fragment.alpha;
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+            ctx.lineWidth = 0.3;
+            ctx.stroke();
+            
+            ctx.restore();
+          }
+          
+          ctx.restore();
+          
+          frameCount++;
+          
+          // Use timeout instead of requestAnimationFrame for better control
+          if (frameCount < maxFrames) {
+            setTimeout(() => requestAnimationFrame(animateCrystals), 16); // ~60fps
+          }
+        };
+        
+        // Start animation with slight delay to prevent stuttering
+        setTimeout(() => animateCrystals(), 0);
+      };
+      
+      crystalEffect();
+      
+      // Remove temporal slow-motion effect
       
       updatePowerUpDisplay();
     }
@@ -3129,24 +3291,75 @@ document.addEventListener('DOMContentLoaded', () => {
     // Create power-up animation particles around the player
     function createPowerUpEffect(type, color, isSmall = false) {
       const particles = [];
-      const particleCount = isSmall ? 8 : 20; // Fewer particles for continuous effects
+      const particleCount = isSmall ? 15 : 30; // Flere partikler for bedre visuell effekt
       
-      // Generate particles in a circular pattern around the player
+      // Definer egenskaper basert på power-up type
+      let particleProperties = {
+        size: isSmall ? (3 + Math.random() * 3) : (5 + Math.random() * 5),
+        distance: isSmall ? (20 + Math.random() * 5) : (40 + Math.random() * 10),
+        speed: isSmall ? (0.3 + Math.random() * 0.5) : (0.7 + Math.random() * 1.2),
+        life: isSmall ? (20 + Math.random() * 20) : (40 + Math.random() * 40)
+      };
+      
+      // Spesielle egenskaper for hver power-up type
+      switch (type) {
+        case 'shield':
+          particleProperties.shape = 'circle';
+          particleProperties.glowIntensity = 8;
+          particleProperties.orbitSpeed = 0.03;
+          break;
+        case 'speed':
+          particleProperties.shape = 'lightning';
+          particleProperties.glowIntensity = 10;
+          particleProperties.trailLength = 3;
+          break;
+        case 'slowTime':
+          particleProperties.shape = 'hourglass';
+          particleProperties.glowIntensity = 6;
+          particleProperties.pulseSpeed = 0.08;
+          break;
+        case 'points':
+          particleProperties.shape = 'star';
+          particleProperties.glowIntensity = 12;
+          particleProperties.sparkleRate = 0.15;
+          break;
+        default:
+          particleProperties.shape = 'circle';
+          particleProperties.glowIntensity = 5;
+      }
+      
+      // Generate particles in a circular or spiral pattern
       for (let i = 0; i < particleCount; i++) {
-        const angle = (i / particleCount) * Math.PI * 2;
-        const distance = isSmall ? (20 + Math.random() * 5) : (30 + Math.random() * 10);
+        // Base angle for circular distribution
+        const baseAngle = (i / particleCount) * Math.PI * 2;
+        // Add some randomness to the angle for a more natural look
+        const angle = baseAngle + (Math.random() - 0.5) * 0.4;
+        
+        // Create spiraling out effect
+        const spiralFactor = Math.min(1, i / (particleCount * 0.7));
+        const distance = particleProperties.distance * spiralFactor;
+        
         const particle = {
           x: player.x + Math.cos(angle) * distance,
           y: player.y + Math.sin(angle) * distance,
-          size: isSmall ? (3 + Math.random() * 3) : (5 + Math.random() * 5),
+          size: particleProperties.size * (0.7 + Math.random() * 0.6), // Varierende størrelse
           alpha: 1,
-          speed: isSmall ? (0.3 + Math.random() * 0.5) : (0.5 + Math.random() * 1),
+          speed: particleProperties.speed * (0.8 + Math.random() * 0.4), // Varierende hastighet
           angle: angle,
           rotation: Math.random() * Math.PI * 2,
-          rotationSpeed: (Math.random() - 0.5) * 0.2,
+          rotationSpeed: (Math.random() - 0.5) * 0.3,
           color: color,
           type: type,
-          life: isSmall ? (20 + Math.random() * 20) : (30 + Math.random() * 30)
+          shape: particleProperties.shape,
+          glowIntensity: particleProperties.glowIntensity,
+          life: particleProperties.life * (0.8 + Math.random() * 0.4),
+          maxLife: particleProperties.life * (0.8 + Math.random() * 0.4),
+          pulsePhase: Math.random() * Math.PI * 2,
+          // Special properties for each type
+          ...(type === 'shield' && { orbitSpeed: particleProperties.orbitSpeed }),
+          ...(type === 'speed' && { trailLength: particleProperties.trailLength }),
+          ...(type === 'slowTime' && { pulseSpeed: particleProperties.pulseSpeed }),
+          ...(type === 'points' && { sparkleRate: particleProperties.sparkleRate })
         };
         particles.push(particle);
       }
@@ -3161,21 +3374,52 @@ document.addEventListener('DOMContentLoaded', () => {
           
           for (const p of this.particles) {
             // Bruk speedFactor for å sikre jevn animasjon uavhengig av skjerm
-            p.life -= 1 * speedFactor;
-            p.alpha = p.life / 30;
-            p.size -= 0.1 * speedFactor;
+            p.life -= 0.7 * speedFactor; // Litt saktere nedtelling for lengre effekt
+            p.alpha = p.life / p.maxLife; // Smoother fade out
             
+            // Ulike bevegelsesmønstre for ulike power-up typer
             if (p.type === 'shield') {
-              const orbitSpeed = 0.03 * speedFactor;
-              p.angle += orbitSpeed;
-              p.x = player.x + Math.cos(p.angle) * (30 + Math.sin(frameCount * 0.1) * 5);
-              p.y = player.y + Math.sin(p.angle) * (30 + Math.sin(frameCount * 0.1) * 5);
-            } else {
-              // Regular power-up effects move upward
+              // Shield particles orbit around player
+              p.angle += p.orbitSpeed * speedFactor;
+              const orbitDistance = 30 + Math.sin(frameCount * 0.05) * 8;
+              p.x = player.x + Math.cos(p.angle) * orbitDistance;
+              p.y = player.y + Math.sin(p.angle) * orbitDistance;
+              
+              // Pulserende størrelseseffekt
+              p.size = (4 + Math.sin(frameCount * 0.1) * 2) * (p.life / p.maxLife);
+              
+            } else if (p.type === 'speed') {
+              // Speed particles zoom upward with trailing effect
+              p.y -= p.speed * 1.5 * speedFactor;
+              p.x += Math.cos(p.angle) * p.speed * 0.8 * speedFactor;
+              
+              // Roterer hurtigere
+              p.rotation += p.rotationSpeed * 2 * speedFactor;
+              
+            } else if (p.type === 'slowTime') {
+              // Slow time particles move in a wave pattern
+              p.y -= p.speed * 0.8 * speedFactor;
+              p.x += Math.sin(p.y * 0.05) * 1.5 * speedFactor;
+              
+              // Pulserende effekt
+              p.pulsePhase += p.pulseSpeed * speedFactor;
+              p.size = p.size * 0.99 + Math.sin(p.pulsePhase) * 1.5;
+              
+            } else if (p.type === 'points') {
+              // Points particles shoot outward in all directions
+              const movementSpeed = p.speed * (1 + (1 - p.life/p.maxLife) * 0.5);
+              p.x += Math.cos(p.angle) * movementSpeed * speedFactor;
+              p.y += Math.sin(p.angle) * movementSpeed * speedFactor;
+              
+              // Twinkle effect
+              p.alpha = p.alpha * 0.95 + Math.random() * 0.2;
+              
+              } else {
+              // Default particle movement for other types
               p.y -= p.speed * speedFactor;
-              p.x += (Math.random() - 0.5) * 0.5 * speedFactor;
+              p.x += (Math.random() - 0.5) * 0.8 * speedFactor;
               p.rotation += p.rotationSpeed * speedFactor;
-            }
+              }
             
             if (p.life > 0 && p.size > 0) {
               stillActive = true;
@@ -3187,59 +3431,123 @@ document.addEventListener('DOMContentLoaded', () => {
         },
         draw() {
           for (const p of this.particles) {
-            if (p.life > 0 && p.size > 0) {
-              ctx.save();
-              ctx.globalAlpha = p.alpha;
+            if (p.life <= 0 || p.size <= 0) continue;
+            
+          ctx.save();
+            ctx.globalAlpha = p.alpha;
+            
+            // Add glow effect based on particle type
+            ctx.shadowBlur = p.glowIntensity * (p.life / p.maxLife);
+            ctx.shadowColor = p.color;
+            
+            // Translate to particle position
+            ctx.translate(p.x, p.y);
+            ctx.rotate(p.rotation);
+            
+            // Draw different shapes based on power-up type
+            if (p.shape === 'circle' || p.type === 'shield') {
+              // Shield particles are glowing circles
+              ctx.fillStyle = p.color;
+              ctx.strokeStyle = 'white';
+              ctx.lineWidth = 1 * (p.life / p.maxLife);
               
-              if (p.type === 'shield') {
-                ctx.fillStyle = p.color;
+              ctx.beginPath();
+              ctx.arc(0, 0, p.size, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.stroke();
+              
+              // Add inner glow
+              ctx.globalAlpha = p.alpha * 0.7;
+              ctx.beginPath();
+              ctx.arc(0, 0, p.size * 0.6, 0, Math.PI * 2);
+              ctx.fillStyle = 'white';
+              ctx.fill();
+              
+            } else if (p.shape === 'lightning' || p.type === 'speed') {
+              // Speed particles are lightning bolts
+              ctx.fillStyle = p.color;
+              
+              // Draw lightning bolt shape
+              ctx.beginPath();
+              ctx.moveTo(0, -p.size);
+              ctx.lineTo(p.size / 2, -p.size / 3);
+              ctx.lineTo(0, p.size / 3);
+              ctx.lineTo(-p.size / 2, p.size);
+              ctx.closePath();
+              ctx.fill();
+              
+              // Add streak effect
+              ctx.globalAlpha = p.alpha * 0.5;
+              ctx.strokeStyle = 'white';
+              ctx.beginPath();
+              ctx.moveTo(0, -p.size);
+              ctx.lineTo(0, p.size);
+              ctx.stroke();
+              
+            } else if (p.shape === 'hourglass' || p.type === 'slowTime') {
+              // Slow time particles are hourglasses or clocks
+              ctx.fillStyle = p.color;
+              
+              // Draw hourglass shape
+              ctx.beginPath();
+              ctx.moveTo(-p.size / 2, -p.size / 2);
+              ctx.lineTo(p.size / 2, -p.size / 2);
+              ctx.lineTo(-p.size / 2, p.size / 2);
+              ctx.lineTo(p.size / 2, p.size / 2);
+              ctx.closePath();
+              ctx.fill();
+              
+              // Add clock hand effect
+              ctx.globalAlpha = p.alpha * 0.8;
+              ctx.strokeStyle = 'white';
+              ctx.beginPath();
+              ctx.moveTo(0, 0);
+              ctx.lineTo(0, -p.size * 0.7);
+              ctx.stroke();
+              
+            } else if (p.shape === 'star' || p.type === 'points') {
+              // Points particles are stars
+              ctx.fillStyle = p.color;
+              
+              // Draw star shape
+              const spikes = 5;
+              const outerRadius = p.size;
+              const innerRadius = p.size * 0.4;
+              
+              ctx.beginPath();
+              for (let i = 0; i < spikes * 2; i++) {
+                const radius = i % 2 === 0 ? outerRadius : innerRadius;
+                const starAngle = (Math.PI / spikes) * i;
+                ctx.lineTo(
+                  Math.cos(starAngle) * radius,
+                  Math.sin(starAngle) * radius
+                );
+              }
+              ctx.closePath();
+              ctx.fill();
+              
+              // Add sparkle effect
+              if (Math.random() < 0.3) {
+                ctx.globalAlpha = p.alpha * Math.random();
                 ctx.strokeStyle = 'white';
                 ctx.lineWidth = 1;
-                
-                ctx.translate(p.x, p.y);
-                ctx.rotate(p.rotation);
-                
                 ctx.beginPath();
-                ctx.arc(0, 0, p.size, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.stroke();
-              } else if (p.type === 'speed') {
-                ctx.fillStyle = p.color;
-                
-                ctx.translate(p.x, p.y);
-                ctx.rotate(p.rotation);
-                
-                // Draw lightning bolt shape
-                ctx.beginPath();
+                ctx.moveTo(-p.size, 0);
+                ctx.lineTo(p.size, 0);
                 ctx.moveTo(0, -p.size);
-                ctx.lineTo(p.size / 2, -p.size / 3);
-                ctx.lineTo(0, p.size / 3);
-                ctx.lineTo(-p.size / 2, p.size);
-                ctx.closePath();
-                ctx.fill();
-              } else if (p.type === 'slowMotion') {
-                ctx.fillStyle = p.color;
-                
-                ctx.translate(p.x, p.y);
-                ctx.rotate(p.rotation);
-                
-                // Draw hourglass shape
-                ctx.beginPath();
-                ctx.moveTo(-p.size / 2, -p.size / 2);
-                ctx.lineTo(p.size / 2, -p.size / 2);
-                ctx.lineTo(-p.size / 2, p.size / 2);
-                ctx.lineTo(p.size / 2, p.size / 2);
-                ctx.closePath();
-                ctx.fill();
-              } else {
-                ctx.fillStyle = p.color;
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-                ctx.fill();
+                ctx.lineTo(0, p.size);
+                ctx.stroke();
               }
               
-              ctx.restore();
-            }
+            } else {
+              // Default circular particle for other types
+              ctx.fillStyle = p.color;
+              ctx.beginPath();
+              ctx.arc(0, 0, p.size, 0, Math.PI * 2);
+              ctx.fill();
+          }
+          
+          ctx.restore();
           }
         }
       };
