@@ -23,8 +23,16 @@
                     </label>
                     <span id="theme-label">Dark Mode</span>
                 </div>
-                <button id="soundToggle" aria-label="Toggle sound" class="sound-toggle">🔊</button>
-                <button id="clearDataBtn" aria-label="Slett all lagret data" class="clear-data-btn">🗑️</button>
+                <div class="button-container">
+                    <div class="button-wrapper">
+                        <button id="soundToggle" aria-label="Toggle sound" class="sound-toggle">🔊</button>
+                        <span class="button-label">Lyd</span>
+                    </div>
+                    <div class="button-wrapper">
+                        <button id="clearDataBtn" aria-label="Slett all lagret data" class="clear-data-btn">🗑️</button>
+                        <span class="button-label">Slett data</span>
+                    </div>
+                </div>
             </div>
             <p class="score-display">Poengsum: <span id="score">0</span></p>
             <p class="score-display">High Score: <span id="highScore">0</span></p>
