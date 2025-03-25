@@ -3251,7 +3251,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize sound effects
     let soundEnabled = true;
     const sounds = {
-      collision: new Audio('sounds/crash.mp3'),
       carCrash: new Audio('sounds/car_crash.mp3'),
       cyclistCrash: new Audio('sounds/cyclist_crash.mp3'),
       pedestrianCrash: new Audio('sounds/pedestrian_crash.mp3'),
