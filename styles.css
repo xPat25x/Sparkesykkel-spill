@@ -3,6 +3,8 @@
     margin: 0;
     padding: 0;
     box-sizing: border-box;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 :root {
@@ -170,6 +172,10 @@ canvas {
     width: 100%;
     height: 600px;
     image-rendering: crisp-edges;
+    image-rendering: -webkit-optimize-contrast; /* For Chrome/Safari */
+    image-rendering: -moz-crisp-edges; /* For Firefox */
+    image-rendering: -o-crisp-edges; /* For Opera */
+    image-rendering: pixelated; /* Future standard */
     transition: background-color 0.3s ease;
 }
 
@@ -387,12 +393,11 @@ button:focus-visible {
 /* Media Queries for Responsive Design */
 @media (max-width: 768px) {
     canvas {
-        height: 450px;
+        height: 400px;
     }
-
+    
     button {
-        padding: 8px 20px;
-        font-size: 14px;
+        padding: 8px 15px;
     }
     
     .top-bar {
@@ -401,11 +406,19 @@ button:focus-visible {
     }
     
     .logos {
-        width: 100%;
+        order: 1;
     }
     
     .theme-toggle {
-        margin-top: 10px;
+        order: 3;
+    }
+    
+    .button-container {
+        order: 2;
+    }
+    
+    body {
+        touch-action: manipulation;
     }
 }
 
@@ -415,25 +428,45 @@ button:focus-visible {
     }
     
     .game-container {
-        border-radius: 10px;
+        padding: 0;
     }
     
     .game-header, .game-controls {
-        padding: 15px 10px;
+        padding: 10px;
     }
     
     button {
-        padding: 6px 15px;
-        font-size: 13px;
-        margin: 0 5px;
+        padding: 8px 12px;
+        font-size: 14px;
     }
     
     .deathtrip-logo {
-        height: 30px;
+        height: 28px;
     }
     
     .uit-logo {
-        height: 40px;
+        height: 35px;
+    }
+}
+
+/* Tillegg for Windows-kompatibilitet */
+@media screen and (-ms-high-contrast: active), (-ms-high-contrast: none) {
+    /* Spesifikke stiler for Internet Explorer */
+    canvas {
+        width: 100%;
+        height: 600px;
+    }
+    
+    .game-container {
+        width: 100%;
+        max-width: 800px;
+    }
+}
+
+/* For Edge (Chromium) */
+@supports (-ms-ime-align:auto) {
+    canvas {
+        image-rendering: auto;
     }
 }
 

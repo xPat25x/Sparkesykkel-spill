@@ -13,6 +13,74 @@
 
 document.addEventListener('DOMContentLoaded', () => {
   try {
+    // Detekterer brukerens plattform
+    function detectPlatform() {
+      const userAgent = navigator.userAgent.toLowerCase();
+      let platform = {
+        isWindows: false,
+        isMac: false,
+        isLinux: false,
+        isMobile: false,
+        browser: 'unknown'
+      };
+      
+      // Operativsystem
+      if (userAgent.indexOf('windows') !== -1) {
+        platform.isWindows = true;
+      } else if (userAgent.indexOf('macintosh') !== -1) {
+        platform.isMac = true;
+      } else if (userAgent.indexOf('linux') !== -1) {
+        platform.isLinux = true;
+      }
+      
+      // Mobil?
+      if (userAgent.indexOf('android') !== -1 || userAgent.indexOf('iphone') !== -1 || 
+          userAgent.indexOf('ipad') !== -1 || userAgent.indexOf('mobile') !== -1) {
+        platform.isMobile = true;
+      }
+      
+      // Nettleser
+      if (userAgent.indexOf('edge') !== -1 || userAgent.indexOf('edg') !== -1) {
+        platform.browser = 'edge';
+      } else if (userAgent.indexOf('chrome') !== -1) {
+        platform.browser = 'chrome';
+      } else if (userAgent.indexOf('firefox') !== -1) {
+        platform.browser = 'firefox';
+      } else if (userAgent.indexOf('safari') !== -1) {
+        platform.browser = 'safari';
+      } else if (userAgent.indexOf('msie') !== -1 || userAgent.indexOf('trident') !== -1) {
+        platform.browser = 'ie';
+      }
+      
+      return platform;
+    }
+    
+    // Tilpasser spillet basert på plattform
+    function optimizeForPlatform(platform) {
+      // For Windows-maskiner
+      if (platform.isWindows) {
+        // Juster rendering for bedre ytelse på Windows
+        if (platform.browser === 'edge' || platform.browser === 'ie') {
+          canvas.style.imageRendering = 'auto';
+        }
+      }
+      
+      // For mobile enheter (selv om dette er et PC-spill, kan det være nyttig)
+      if (platform.isMobile) {
+        canvas.height = 350; // Mindre canvas for mobil
+      }
+      
+      console.log('Spillet er optimalisert for: ' + 
+                  (platform.isWindows ? 'Windows' : 
+                   platform.isMac ? 'Mac' : 
+                   platform.isLinux ? 'Linux' : 'Ukjent plattform') +
+                  ' med ' + platform.browser + ' nettleser');
+    }
+    
+    // Detekter og optimaliser for brukerens plattform
+    const userPlatform = detectPlatform();
+    optimizeForPlatform(userPlatform);
+    
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     const startBtn = document.getElementById('startBtn');
@@ -1126,61 +1194,86 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     window.addEventListener('keydown', (e) => {
-      // Ikke fang tastetrykk hvis et input-felt har fokus
-      if (document.activeElement && document.activeElement.tagName === 'INPUT') {
-        return; // La nettleseren håndtere tastetrykket
-      }
-      
-      // Sjekk også for tekstområder som ikke er playerName
-      if (document.activeElement && document.activeElement.tagName === 'TEXTAREA' && 
-          document.activeElement.id !== 'playerName') {
-        return; // La nettleseren håndtere tastetrykket
-      }
-      
-      // Spesialtilfelle: Hvis vi er i playerName tekstfelt, tillat WASD for spilling
-      // men tillat fortsatt skriving av bokstavene w, a, s, d
-      if (document.activeElement && document.activeElement.id === 'playerName') {
-        // La nettleseren fortsette å håndtere inputen for tekstfeltet
+      if (!gameRunning && !gameOver && e.key === 'Enter') {
+        startGame();
         return;
       }
       
-      const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
-      if (keys.hasOwnProperty(key)) {
-        keys[key] = true;
+      if (gameOver && e.key === 'Enter') {
+        restartGame();
+        return;
+      }
+      
+      const key = e.key.toLowerCase();
+      
+      // Piltaster (vanlig navigasjon)
+      if (key === 'arrowleft' || key === 'left') {
+        keysPressed.left = true;
+        e.preventDefault();
+      }
+      if (key === 'arrowright' || key === 'right') {
+        keysPressed.right = true;
+        e.preventDefault();
+      }
+      if (key === 'arrowup' || key === 'up') {
+        keysPressed.up = true;
+        e.preventDefault();
+      }
+      if (key === 'arrowdown' || key === 'down') {
+        keysPressed.down = true;
         e.preventDefault();
       }
       
-      // Toggle debug mode with 'D' key
-      if (key === 'd' && e.ctrlKey) {
-        debugMode = !debugMode;
-        console.log(`Debug mode ${debugMode ? 'enabled' : 'disabled'}`);
+      // WASD taster (alternativ navigasjon)
+      if (key === 'a') {
+        keysPressed.left = true;
+      }
+      if (key === 'd') {
+        keysPressed.right = true;
+      }
+      if (key === 'w') {
+        keysPressed.up = true;
+      }
+      if (key === 's') {
+        keysPressed.down = true;
+      }
+      
+      // Støtte for spacebar (pause)
+      if (key === ' ' && gameRunning) {
+        togglePause();
         e.preventDefault();
       }
     });
 
     window.addEventListener('keyup', (e) => {
-      // Ikke fang tastetrykk hvis et input-felt har fokus
-      if (document.activeElement && document.activeElement.tagName === 'INPUT') {
-        return; // La nettleseren håndtere tastetrykket
+      const key = e.key.toLowerCase();
+      
+      // Piltaster
+      if (key === 'arrowleft' || key === 'left') {
+        keysPressed.left = false;
+      }
+      if (key === 'arrowright' || key === 'right') {
+        keysPressed.right = false;
+      }
+      if (key === 'arrowup' || key === 'up') {
+        keysPressed.up = false;
+      }
+      if (key === 'arrowdown' || key === 'down') {
+        keysPressed.down = false;
       }
       
-      // Sjekk også for tekstområder som ikke er playerName
-      if (document.activeElement && document.activeElement.tagName === 'TEXTAREA' && 
-          document.activeElement.id !== 'playerName') {
-        return; // La nettleseren håndtere tastetrykket
+      // WASD taster
+      if (key === 'a') {
+        keysPressed.left = false;
       }
-      
-      // Spesialtilfelle: Hvis vi er i playerName tekstfelt, tillat WASD for spilling
-      // men tillat fortsatt skriving av bokstavene w, a, s, d
-      if (document.activeElement && document.activeElement.id === 'playerName') {
-        // La nettleseren fortsette å håndtere inputen for tekstfeltet
-        return;
+      if (key === 'd') {
+        keysPressed.right = false;
       }
-      
-      const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
-      if (keys.hasOwnProperty(key)) {
-        keys[key] = false;
-        e.preventDefault();
+      if (key === 'w') {
+        keysPressed.up = false;
+      }
+      if (key === 's') {
+        keysPressed.down = false;
       }
     });
 
@@ -3383,7 +3476,7 @@ document.addEventListener('DOMContentLoaded', () => {
     powerUpEffects = [];
 
     // Initialize sound effects
-    let soundEnabled = true;
+    let soundEnabled = false; // Default er nå deaktivert
     const sounds = {
       carCrash: new Audio('sounds/car_crash.mp3'),
       cyclistCrash: new Audio('sounds/cyclist_crash.mp3'),
@@ -3399,68 +3492,61 @@ document.addEventListener('DOMContentLoaded', () => {
       drunkLevel: new Audio('sounds/drunk_level_up.mp3')
     };
 
-    // For sounds that might overlap, we need to handle them specially
-    let engineSound = null;
-    let engineSoundPlaying = false;
-
-    // Function to play sound effects
+    // Function to play sound effects - nå tomme funksjoner
     function playSoundEffect(soundName) {
-      if (!soundEnabled) return;
+      // Alle lyder er deaktivert
+      return;
+    }
+
+    // Deaktiver mottor-lyd-funksjonene
+    function startEngineSound() {
+      // Deaktivert
+      return;
+    }
+
+    function stopEngineSound() {
+      // Deaktivert
+      return;
+    }
+
+    // Feilhåndtering for lyd - for å sikre at spillet fungerer selv hvis lyd ikke lastes
+    for (const sound in sounds) {
+      sounds[sound].addEventListener('error', function() {
+        console.warn(`Kunne ikke laste lydfil: ${sound}`);
+        // Fortsett spillet selv om lyden feiler - denne tomme funksjonen erstatter den normale play()
+        this.play = function() {};
+      });
       
-      // Handle looping engine sound differently
-      if (soundName === 'scooterEngine') {
-        if (!engineSoundPlaying) {
-          engineSound = sounds.scooterEngine.cloneNode();
-          engineSound.loop = true;
-          engineSound.volume = 0.4;
-          engineSound.play().catch(e => console.warn('Could not play engine sound:', e));
-          engineSoundPlaying = true;
-        }
-        return;
-      }
+      // Forhåndslast lydfiler
+      sounds[sound].load();
+    }
+
+    // Bedre håndtering av lydavspilling med feilhåndtering
+    function playSoundEffect(soundName) {
+      if (!soundEnabled || !sounds[soundName]) return;
       
-      // Stop engine sound if requested
-      if (soundName === 'stopEngine' && engineSoundPlaying) {
-        if (engineSound) {
-          engineSound.pause();
-          engineSound = null;
-        }
-        engineSoundPlaying = false;
-        return;
-      }
-      
-      // For other sounds, clone the audio element to allow overlapping sounds
-      if (sounds[soundName]) {
-        const sound = sounds[soundName].cloneNode();
+      try {
+        // Stopp lyden hvis den allerede spilles (unngå overlapping)
+        sounds[soundName].pause();
+        sounds[soundName].currentTime = 0;
         
-        // Set appropriate volume based on sound type
-        if (soundName.includes('Crash') || soundName === 'collision') {
-          sound.volume = 0.8;
-        } else if (soundName === 'gameOver') {
-          sound.volume = 0.9;
-        } else {
-          sound.volume = 0.6;
-        }
+        // Spill lyden med Promise for å håndtere feil
+        const playPromise = sounds[soundName].play();
         
-        sound.play().catch(e => console.warn(`Could not play ${soundName} sound:`, e));
+        if (playPromise !== undefined) {
+          playPromise.catch(error => {
+            console.warn(`Feil ved avspilling av lyd ${soundName}: ${error.message}`);
+          });
+        }
+      } catch (error) {
+        console.warn(`Kunne ikke spille lyd ${soundName}: ${error.message}`);
       }
     }
 
     // Toggle sound function
     function toggleSound() {
-      soundEnabled = !soundEnabled;
-      
-      if (!soundEnabled && engineSoundPlaying) {
-        playSoundEffect('stopEngine');
-      } else if (soundEnabled && gameRunning) {
-        playSoundEffect('scooterEngine');
-      }
-      
-      // Update UI indicator if it exists
-      const soundToggle = document.getElementById('soundToggle');
-      if (soundToggle) {
-        soundToggle.textContent = soundEnabled ? '🔊' : '🔇';
-      }
+      // Vis en melding om at lyden er under utvikling
+      showMessage('Lyd er under utvikling', 120);
     }
 
     function getRandomSafetyTip() {
@@ -3493,8 +3579,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initialize sound toggle button
     if (soundToggle) {
+      soundToggle.textContent = '🔇'; // Alltid muted
+      
+      // Vis en melding når brukeren klikker på lydknappen
       soundToggle.addEventListener('click', () => {
-        toggleSound();
+        showMessage('Lyd er under utvikling', 120);
       });
     }
     
