@@ -2849,8 +2849,6 @@ document.addEventListener('DOMContentLoaded', () => {
       } else if (collectible.type === 'points') {
         score += 10;
         scoreDisplay.textContent = score;
-        // Create an effect even for points
-        powerUpEffects.push(createPowerUpEffect(collectible.type, collectible.color));
         return; // Don't add to active power-ups since it's instant
       }
       
@@ -2865,178 +2863,7 @@ document.addEventListener('DOMContentLoaded', () => {
           // Add new power-up
           activePowerUps.push(powerUp);
         }
-        
-        // Create the particle effect for the collected power-up
-        powerUpEffects.push(createPowerUpEffect(collectible.type, collectible.color));
       }
-      
-      // Forbedret visuell feedback
-      // Flash-effekt på hele skjermen
-      const flash = document.createElement('div');
-      flash.className = 'powerup-collected';
-      flash.style.backgroundColor = collectible.color + '50';
-      document.querySelector('.game-container').appendChild(flash);
-      setTimeout(() => flash.remove(), 500);
-      
-      // Legg til sjokkbølge-effekt på spillerenå
-      const shockwaveRadius = 40; // Reduced from 50
-      const shockwaveParticles = 8; // Reduced from 15
-      
-      // Create a single shockwave instead of multiple ones
-      const shockwaveEffect = {
-        x: collectible.x,
-        y: collectible.y,
-        radius: 5,
-        maxRadius: shockwaveRadius,
-        speed: 2.5,
-        alpha: 0.7,
-        color: collectible.color
-      };
-      
-      // Legg til animasjon for sjokkbølgen
-      const animateShockwave = () => {
-        if (shockwaveEffect.radius >= shockwaveEffect.maxRadius || !gameRunning) {
-          return;
-        }
-        
-        ctx.save();
-        ctx.globalAlpha = shockwaveEffect.alpha;
-        ctx.strokeStyle = shockwaveEffect.color;
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(shockwaveEffect.x, shockwaveEffect.y, shockwaveEffect.radius, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.restore();
-        
-        shockwaveEffect.radius += shockwaveEffect.speed;
-        shockwaveEffect.alpha -= 0.035; // Faster fade out
-        
-        if (shockwaveEffect.alpha > 0) {
-          setTimeout(() => requestAnimationFrame(animateShockwave), 16); // Limit to ~60fps
-        }
-      };
-      
-      // Start with a slight delay to improve performance
-      setTimeout(() => animateShockwave(), 0);
-      
-      // Legg til en futuristisk/glass-effekt i stedet for bobleeffekt
-      // Lag en serie av polygoner som danner en krystalleffekt
-      const crystalEffect = () => {
-        const fragments = [];
-        const fragmentCount = 6; // Reduced from 8
-        
-        // Opprett krystallfragmenter
-        for (let i = 0; i < fragmentCount; i++) {
-          const angle = (i / fragmentCount) * Math.PI * 2;
-          const distance = 20 + Math.random() * 30;
-          
-          // Simplified points creation - pre-calculate points instead of dynamically
-          const pointCount = 5;
-          const points = [];
-          for (let j = 0; j < pointCount; j++) {
-            const pointAngle = (j / pointCount) * Math.PI * 2;
-            const pointDistance = (0.7 + Math.random() * 0.3); // Reduced randomness
-            points.push({
-              x: Math.cos(pointAngle) * pointDistance,
-              y: Math.sin(pointAngle) * pointDistance
-            });
-          }
-          
-          fragments.push({
-            x: collectible.x,
-            y: collectible.y,
-            targetX: collectible.x + Math.cos(angle) * distance,
-            targetY: collectible.y + Math.sin(angle) * distance,
-            size: 10 + Math.random() * 10, // Reduced size variation
-            alpha: 0.9,
-            rotation: Math.random() * Math.PI * 2,
-            rotationSpeed: (Math.random() - 0.5) * 0.1, // Reduced rotation speed
-            color: collectible.color,
-            points: points
-          });
-        }
-        
-        let frameCount = 0;
-        const maxFrames = 30; // Reduced animation frames
-        
-        const animateCrystals = () => {
-          if (frameCount >= maxFrames || !gameRunning) {
-            return;
-          }
-          
-          const progress = frameCount / maxFrames;
-          
-          ctx.save();
-          
-          // Tegn hvert krystallfragment
-          for (const fragment of fragments) {
-            const x = fragment.x + (fragment.targetX - fragment.x) * progress;
-            const y = fragment.y + (fragment.targetY - fragment.y) * progress;
-            
-            fragment.alpha = 0.9 * (1 - progress);
-            const currentSize = fragment.size * (1 - progress * 0.5);
-            
-            fragment.rotation += fragment.rotationSpeed;
-            
-            ctx.save();
-            ctx.translate(x, y);
-            ctx.rotate(fragment.rotation);
-            ctx.scale(currentSize / 10, currentSize / 10);
-            
-            ctx.globalAlpha = fragment.alpha;
-            
-            // Simplified gradient with fewer color stops
-            const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, 10);
-            gradient.addColorStop(0, fragment.color);
-            gradient.addColorStop(1, fragment.color + '00'); // Fully transparent
-            
-            ctx.beginPath();
-            for (let i = 0; i < fragment.points.length; i++) {
-              const point = fragment.points[i];
-              if (i === 0) {
-                ctx.moveTo(point.x * 10, point.y * 10);
-              } else {
-                ctx.lineTo(point.x * 10, point.y * 10);
-              }
-            }
-            ctx.closePath();
-            
-            ctx.fillStyle = gradient;
-            ctx.fill();
-            
-            // Simplified highlight effect - just one highlight per fragment
-            ctx.globalAlpha = fragment.alpha * 0.5;
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-            ctx.beginPath();
-            ctx.ellipse(-2, -2, 3, 2, Math.PI/4, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Thinner border for better performance
-            ctx.globalAlpha = fragment.alpha;
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
-            ctx.lineWidth = 0.3;
-            ctx.stroke();
-            
-            ctx.restore();
-          }
-          
-          ctx.restore();
-          
-          frameCount++;
-          
-          // Use timeout instead of requestAnimationFrame for better control
-          if (frameCount < maxFrames) {
-            setTimeout(() => requestAnimationFrame(animateCrystals), 16); // ~60fps
-          }
-        };
-        
-        // Start animation with slight delay to prevent stuttering
-        setTimeout(() => animateCrystals(), 0);
-      };
-      
-      crystalEffect();
-      
-      // Remove temporal slow-motion effect
       
       updatePowerUpDisplay();
     }
@@ -3483,7 +3310,6 @@ document.addEventListener('DOMContentLoaded', () => {
               ctx.moveTo(0, -p.size);
               ctx.lineTo(0, p.size);
               ctx.stroke();
-              
             } else if (p.shape === 'hourglass' || p.type === 'slowTime') {
               // Slow time particles are hourglasses or clocks
               ctx.fillStyle = p.color;
