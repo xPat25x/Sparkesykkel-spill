@@ -1192,6 +1192,14 @@ document.addEventListener('DOMContentLoaded', () => {
       w: false,
       s: false
     };
+    
+    // Legg til keysPressed for kompatibilitet
+    const keysPressed = {
+      left: false,
+      right: false,
+      up: false,
+      down: false
+    };
 
     window.addEventListener('keydown', (e) => {
       if (!gameRunning && !gameOver && e.key === 'Enter') {
@@ -1209,33 +1217,41 @@ document.addEventListener('DOMContentLoaded', () => {
       // Piltaster (vanlig navigasjon)
       if (key === 'arrowleft' || key === 'left') {
         keysPressed.left = true;
+        keys.ArrowLeft = true;
         e.preventDefault();
       }
       if (key === 'arrowright' || key === 'right') {
         keysPressed.right = true;
+        keys.ArrowRight = true;
         e.preventDefault();
       }
       if (key === 'arrowup' || key === 'up') {
         keysPressed.up = true;
+        keys.ArrowUp = true;
         e.preventDefault();
       }
       if (key === 'arrowdown' || key === 'down') {
         keysPressed.down = true;
+        keys.ArrowDown = true;
         e.preventDefault();
       }
       
       // WASD taster (alternativ navigasjon)
       if (key === 'a') {
         keysPressed.left = true;
+        keys.a = true;
       }
       if (key === 'd') {
         keysPressed.right = true;
+        keys.d = true;
       }
       if (key === 'w') {
         keysPressed.up = true;
+        keys.w = true;
       }
       if (key === 's') {
         keysPressed.down = true;
+        keys.s = true;
       }
       
       // Støtte for spacebar (pause)
@@ -1251,29 +1267,37 @@ document.addEventListener('DOMContentLoaded', () => {
       // Piltaster
       if (key === 'arrowleft' || key === 'left') {
         keysPressed.left = false;
+        keys.ArrowLeft = false;
       }
       if (key === 'arrowright' || key === 'right') {
         keysPressed.right = false;
+        keys.ArrowRight = false;
       }
       if (key === 'arrowup' || key === 'up') {
         keysPressed.up = false;
+        keys.ArrowUp = false;
       }
       if (key === 'arrowdown' || key === 'down') {
         keysPressed.down = false;
+        keys.ArrowDown = false;
       }
       
       // WASD taster
       if (key === 'a') {
         keysPressed.left = false;
+        keys.a = false;
       }
       if (key === 'd') {
         keysPressed.right = false;
+        keys.d = false;
       }
       if (key === 'w') {
         keysPressed.up = false;
+        keys.w = false;
       }
       if (key === 's') {
         keysPressed.down = false;
+        keys.s = false;
       }
     });
 
