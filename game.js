@@ -1193,13 +1193,7 @@ document.addEventListener('DOMContentLoaded', () => {
       s: false
     };
     
-    // Legg til keysPressed for kompatibilitet
-    const keysPressed = {
-      left: false,
-      right: false,
-      up: false,
-      down: false
-    };
+    // Keysressed fjernet helt, siden vi bruker keys-objektet direkte
 
     window.addEventListener('keydown', (e) => {
       if (!gameRunning && !gameOver && e.key === 'Enter') {
@@ -1212,45 +1206,37 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
       
-      const key = e.key.toLowerCase();
+      const key = e.key;
       
-      // Piltaster (vanlig navigasjon)
-      if (key === 'arrowleft' || key === 'left') {
-        keysPressed.left = true;
+      // Oppdater keys-objektet direkte
+      if (key === 'ArrowLeft' || key === 'Left') {
         keys.ArrowLeft = true;
         e.preventDefault();
       }
-      if (key === 'arrowright' || key === 'right') {
-        keysPressed.right = true;
+      if (key === 'ArrowRight' || key === 'Right') {
         keys.ArrowRight = true;
         e.preventDefault();
       }
-      if (key === 'arrowup' || key === 'up') {
-        keysPressed.up = true;
+      if (key === 'ArrowUp' || key === 'Up') {
         keys.ArrowUp = true;
         e.preventDefault();
       }
-      if (key === 'arrowdown' || key === 'down') {
-        keysPressed.down = true;
+      if (key === 'ArrowDown' || key === 'Down') {
         keys.ArrowDown = true;
         e.preventDefault();
       }
       
-      // WASD taster (alternativ navigasjon)
-      if (key === 'a') {
-        keysPressed.left = true;
+      // WASD taster
+      if (key === 'a' || key === 'A') {
         keys.a = true;
       }
-      if (key === 'd') {
-        keysPressed.right = true;
+      if (key === 'd' || key === 'D') {
         keys.d = true;
       }
-      if (key === 'w') {
-        keysPressed.up = true;
+      if (key === 'w' || key === 'W') {
         keys.w = true;
       }
-      if (key === 's') {
-        keysPressed.down = true;
+      if (key === 's' || key === 'S') {
         keys.s = true;
       }
       
@@ -1262,41 +1248,33 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     window.addEventListener('keyup', (e) => {
-      const key = e.key.toLowerCase();
+      const key = e.key;
       
-      // Piltaster
-      if (key === 'arrowleft' || key === 'left') {
-        keysPressed.left = false;
+      // Oppdater keys-objektet direkte
+      if (key === 'ArrowLeft' || key === 'Left') {
         keys.ArrowLeft = false;
       }
-      if (key === 'arrowright' || key === 'right') {
-        keysPressed.right = false;
+      if (key === 'ArrowRight' || key === 'Right') {
         keys.ArrowRight = false;
       }
-      if (key === 'arrowup' || key === 'up') {
-        keysPressed.up = false;
+      if (key === 'ArrowUp' || key === 'Up') {
         keys.ArrowUp = false;
       }
-      if (key === 'arrowdown' || key === 'down') {
-        keysPressed.down = false;
+      if (key === 'ArrowDown' || key === 'Down') {
         keys.ArrowDown = false;
       }
       
       // WASD taster
-      if (key === 'a') {
-        keysPressed.left = false;
+      if (key === 'a' || key === 'A') {
         keys.a = false;
       }
-      if (key === 'd') {
-        keysPressed.right = false;
+      if (key === 'd' || key === 'D') {
         keys.d = false;
       }
-      if (key === 'w') {
-        keysPressed.up = false;
+      if (key === 'w' || key === 'W') {
         keys.w = false;
       }
-      if (key === 's') {
-        keysPressed.down = false;
+      if (key === 's' || key === 'S') {
         keys.s = false;
       }
     });
