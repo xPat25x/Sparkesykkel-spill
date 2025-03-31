@@ -56,7 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // Tilpasser spillet basert på plattform
-    function optimizeForPlatform(platform) {
+    function optimizeForPlatform(platform, canvas) {
       // For Windows-maskiner
       if (platform.isWindows) {
         // Juster rendering for bedre ytelse på Windows
@@ -77,9 +77,8 @@ document.addEventListener('DOMContentLoaded', () => {
                   ' med ' + platform.browser + ' nettleser');
     }
     
-    // Detekter og optimaliser for brukerens plattform
+    // Hent brukerens plattform
     const userPlatform = detectPlatform();
-    optimizeForPlatform(userPlatform);
     
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
@@ -88,6 +87,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const scoreDisplay = document.getElementById('score');
     const highScoreDisplay = document.getElementById('highScore');
     const soundToggle = document.getElementById('soundToggle');
+
+    // Optimaliser for plattform etter at canvas er definert
+    optimizeForPlatform(userPlatform, canvas);
 
     // Sett lerretstørrelse basert på elementets offset
     canvas.width = canvas.offsetWidth;
