@@ -725,6 +725,9 @@ button:focus-visible {
   font-weight: bold;
   color: #FFD700;
   font-size: 18px;
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
 
 .highscore-table {
@@ -734,6 +737,9 @@ button:focus-visible {
   width: 100%;
   scrollbar-width: thin;
   scrollbar-color: var(--primary-color) rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 5px;
+  padding: 5px;
 }
 
 .highscore-table::-webkit-scrollbar {
@@ -759,6 +765,7 @@ button:focus-visible {
   border-radius: 5px;
   transition: background-color 0.2s;
   font-size: 16px;
+  min-height: 45px;
 }
 
 .highscore-row:hover {
@@ -777,11 +784,13 @@ button:focus-visible {
   text-overflow: ellipsis;
   max-width: 300px;
   padding-right: 15px;
+  line-height: 1.5;
 }
 
 .score-cell {
   text-align: right;
   font-weight: bold;
+  min-width: 90px;
 }
 
 .rank-1 {
@@ -840,13 +849,21 @@ button:focus-visible {
   }
   
   .highscore-header, .highscore-row {
-    grid-template-columns: 70px 1fr 90px;
-    padding: 8px 12px;
-    font-size: 16px;
+    grid-template-columns: 60px 1fr 80px;
+    padding: 8px 10px;
+    font-size: 14px;
   }
   
   .name-cell {
-    max-width: 200px;
+    max-width: 180px;
+  }
+  
+  .score-cell {
+    min-width: 70px;
+  }
+  
+  .highscore-list h3 {
+    font-size: 20px;
   }
 }
 

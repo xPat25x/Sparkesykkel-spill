@@ -1414,6 +1414,14 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.filter = 'none';
         ctx.resetTransform ? ctx.resetTransform() : ctx.setTransform(1, 0, 0, 1, 0, 0);
         ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // Vis et sikkerhetstips når spillet starter
+        showSafetyTip();
+      }
+      
+      // Vis et nytt sikkerhetstips hvert 15. sekund (900 frames ved 60fps)
+      if (frameCount % 900 === 0 && frameCount > 0) {
+        showSafetyTip();
       }
       
       // Reset transforms at the beginning of each frame
@@ -1532,14 +1540,14 @@ document.addEventListener('DOMContentLoaded', () => {
         // ctx.fillRect(0, 0, canvas.width, canvas.height);
         
         // Erstatt med mer synlige men kortvarige glitch/flash effekter
-        if (Math.random() < drunkLevel * 0.15) {
+        if (Math.random() < drunkLevel * 0.10) { // Økt fra 0.07 til 0.10 (original var 0.15)
           ctx.save();
           // Tilfeldig fargevalg for glitch med høyere synlighet men mer gjennomsiktig
-          const colors = ['rgba(255, 130, 130, 0.18)', 'rgba(130, 130, 255, 0.18)']; // Lysere men mer gjennomsiktig
+          const colors = ['rgba(255, 130, 130, 0.15)', 'rgba(130, 130, 255, 0.15)']; // Økt opacity fra 0.12 til 0.15
           ctx.fillStyle = colors[Math.floor(Math.random() * colors.length)];
           
           // Tegn bare en del av skjermen for å ikke blokkere hele visningen
-          const glitchHeight = canvas.height * 0.2;
+          const glitchHeight = canvas.height * 0.18; // Økt fra 0.15 til 0.18
           const glitchY = Math.random() * (canvas.height - glitchHeight);
           ctx.fillRect(0, glitchY, canvas.width, glitchHeight);
           ctx.restore();
@@ -1547,17 +1555,17 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Double vision with improved visibility - only for higher drunk levels
         if (drunkLevel > 0.4) {
-          const doubleVisionOffset = Math.sin(Math.floor(frameCount * 0.02)) * drunkLevel * 1.5;
+          const doubleVisionOffset = Math.sin(Math.floor(frameCount * 0.02)) * drunkLevel * 1.2; // Økt fra 1.0 til 1.2
           ctx.save();
           // Balansert alpha for dobbeltvisjon - synlig men ikke for forstyrrende
-          ctx.globalAlpha = 0.12 * drunkLevel; // Justert til en mer balansert verdi
+          ctx.globalAlpha = 0.10 * drunkLevel; // Økt fra 0.08 til 0.10
           ctx.translate(doubleVisionOffset, 0);
         }
         
         // Apply camera shake effect based on drunk level
         if (cameraShakeEnabled && drunkLevel > 0.2) {
           // Calculate shake intensity based on drunk level
-          const baseShakeIntensity = drunkLevel * 2.5;
+          const baseShakeIntensity = drunkLevel * 1.8; // Økt fra 1.5 til 1.8
           
           // Add random shake offset
           const shakeX = (Math.random() - 0.5) * baseShakeIntensity;
@@ -1571,26 +1579,27 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         // Random glitch effects at higher drunk levels
-        if (drunkLevel > 0.5 && Math.random() < drunkLevel * 0.03) {
+        if (drunkLevel > 0.5 && Math.random() < drunkLevel * 0.02) { // Økt fra 0.015 til 0.02
           isGlitching = true;
           lastGlitchTime = frameCount;
-          glitchIntensity = Math.random() * drunkLevel * 2;
-          glitchOffsetX = (Math.random() - 0.5) * glitchIntensity * 20;
-          glitchOffsetY = (Math.random() - 0.5) * glitchIntensity * 10;
+          glitchIntensity = Math.random() * drunkLevel * 1.4; // Økt fra 1.0 til 1.4
+          glitchOffsetX = (Math.random() - 0.5) * glitchIntensity * 18; // Økt fra 15 til 18
+          glitchOffsetY = (Math.random() - 0.5) * glitchIntensity * 9; // Økt fra 7 til 9
         }
         
         // Apply active glitch effect with improved visibility
-        if (isGlitching && frameCount - lastGlitchTime < 5) {
+        if (isGlitching && frameCount - lastGlitchTime < 4) { // Økt fra 3 til 4 frames
           ctx.save();
           ctx.globalCompositeOperation = 'difference';
+          ctx.globalAlpha = 0.7; // Økt fra 0.6 til 0.7
           ctx.drawImage(canvas, glitchOffsetX, glitchOffsetY);
           ctx.restore();
           
           // Øk hyppigheten og synligheten av fargekanal-forskyvning
-          if (Math.random() < 0.7) {
+          if (Math.random() < 0.6) { // Økt fra 0.5 til 0.6
             ctx.save();
             ctx.globalCompositeOperation = 'screen';
-            ctx.fillStyle = 'rgba(255, 80, 80, 0.15)'; // Lysere rødfarge men mer gjennomsiktig
+            ctx.fillStyle = 'rgba(255, 80, 80, 0.12)'; // Økt fra 0.09 til 0.12
             ctx.fillRect(glitchOffsetX, 0, canvas.width, canvas.height);
             ctx.restore();
           }
@@ -1599,17 +1608,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         // Øk hyppigheten av glitch-effekter
-        if (drunkLevel > 0.3 && Math.random() < drunkLevel * 0.1) {
+        if (drunkLevel > 0.35 && Math.random() < drunkLevel * 0.06) { // Endret krav fra 0.4 til 0.35 og økt sannsynlighet fra 0.04 til 0.06
           isGlitching = true;
           lastGlitchTime = frameCount;
-          glitchIntensity = Math.random() * drunkLevel * 3;
-          glitchOffsetX = (Math.random() - 0.5) * glitchIntensity * 30;
-          glitchOffsetY = (Math.random() - 0.5) * glitchIntensity * 15;
+          glitchIntensity = Math.random() * drunkLevel * 2.0; // Økt fra 1.5 til 2.0
+          glitchOffsetX = (Math.random() - 0.5) * glitchIntensity * 20; // Økt fra 15 til 20
+          glitchOffsetY = (Math.random() - 0.5) * glitchIntensity * 10; // Økt fra 8 til 10
         }
       }
       
       // Apply road distortion based on drunk level
-      roadDistortion = drunkLevel * 40;
+      roadDistortion = drunkLevel * 30; // Økt fra 25 til 30
       
       drawRoad();
       
@@ -1849,13 +1858,24 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Only show message if there is one
         if (drunkMessage) {
-          ctx.fillText(drunkMessage, 10, canvas.height - 20);
+          // Flyttet drunkMessage og meterbar mye høyere opp på skjermen
+          // for å unngå overlapp med annen tekst
+          ctx.fillText(drunkMessage, 10, 30); // Changed from canvas.height - 50 to 30
           
           // Draw drunk meter
-          const meterWidth = 100;
-          const meterHeight = 10;
-          ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-          ctx.fillRect(150, canvas.height - 25, meterWidth, meterHeight);
+          const meterWidth = 150;
+          const meterHeight = 15;
+          const meterX = 10;
+          const meterY = 40; // Changed from canvas.height - 40 to 40
+          
+          // Bakgrunn for meter
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+          ctx.fillRect(meterX, meterY, meterWidth, meterHeight);
+          
+          // Tegnekant rundt meter
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(meterX, meterY, meterWidth, meterHeight);
           
           // Meter color varies with drunk level
           let meterColor;
@@ -1868,7 +1888,12 @@ document.addEventListener('DOMContentLoaded', () => {
           }
           
           ctx.fillStyle = meterColor;
-          ctx.fillRect(150, canvas.height - 25, meterWidth * drunkLevel, meterHeight);
+          ctx.fillRect(meterX, meterY, meterWidth * drunkLevel, meterHeight);
+          
+          // Vis også beruselsesnivå i prosent
+          ctx.fillStyle = 'white';
+          ctx.font = 'bold 12px Arial';
+          ctx.fillText(`${Math.floor(drunkLevel * 100)}%`, meterX + meterWidth + 10, meterY + 12);
         }
         
         ctx.restore();
@@ -2825,10 +2850,74 @@ document.addEventListener('DOMContentLoaded', () => {
     initRoadLines();
     clearCanvas();
     drawRoad();
-    ctx.fillStyle = '#FFF';
-    ctx.font = '20px Arial';
+    
+    // Gjør velkomst-teksten mer synlig
+    const welcomeText = 'Trykk på "Start Spill" for å begynne';
+    
+    // Lagre canvas-tilstanden
+    ctx.save();
+    
+    // Sett font først
+    ctx.font = 'bold 24px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText('Trykk på "Start Spill" for å begynne', canvas.width / 2, canvas.height / 2);
+    ctx.textBaseline = 'middle';
+    
+    // Beregn tekstbredden etter at fonten er satt
+    const textWidth = ctx.measureText(welcomeText).width + 40;
+    
+    // Tegn en halv-gjennomsiktig bakgrunn for teksten
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    ctx.fillRect(canvas.width/2 - textWidth/2, canvas.height/2 - 40, textWidth, 80);
+    
+    // Tegn en grønn border
+    ctx.strokeStyle = '#4CAF50';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(canvas.width/2 - textWidth/2, canvas.height/2 - 40, textWidth, 80);
+    
+    // Tegn teksten med skygge
+    ctx.shadowColor = "rgba(0, 0, 0, 0.7)";
+    ctx.shadowBlur = 5;
+    ctx.shadowOffsetX = 2;
+    ctx.shadowOffsetY = 2;
+    
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillText(welcomeText, canvas.width / 2, canvas.height / 2);
+    
+    // Legg til en pulserende effekt
+    function pulseWelcomeText() {
+      if (!gameRunning && !gameOver) {
+        // Varier størrelsen litt
+        const size = 24 + Math.sin(Date.now() / 500) * 2;
+        
+        clearCanvas();
+        drawRoad();
+        
+        // Tegn bakgrunn og ramme på nytt
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.fillRect(canvas.width/2 - textWidth/2, canvas.height/2 - 40, textWidth, 80);
+        
+        ctx.strokeStyle = '#4CAF50';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(canvas.width/2 - textWidth/2, canvas.height/2 - 40, textWidth, 80);
+        
+        // Tegn teksten med varierende størrelse
+        ctx.shadowColor = "rgba(0, 0, 0, 0.7)";
+        ctx.shadowBlur = 5;
+        ctx.shadowOffsetX = 2;
+        ctx.shadowOffsetY = 2;
+        
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = `bold ${size}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(welcomeText, canvas.width / 2, canvas.height / 2);
+        
+        requestAnimationFrame(pulseWelcomeText);
+      }
+    }
+    
+    pulseWelcomeText();
+    ctx.restore();
 
     const camera = {
       x: 0,
@@ -2991,22 +3080,24 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       updatePowerUpDisplay();
       if (activePowerUps.length > 0) {
-        ctx.save();
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-        ctx.fillRect(10, 10, 150, 30);
-        let xOffset = 20;
-        for (const powerUp of activePowerUps) {
-          ctx.fillStyle = powerUp.color;
-          ctx.fillText(powerUp.icon, xOffset, 30);
-          const barWidth = 30;
-          const remainingWidth = (powerUp.timeLeft / powerUp.duration) * barWidth;
-          ctx.fillStyle = '#FFF';
-          ctx.fillRect(xOffset, 35, barWidth, 3);
-          ctx.fillStyle = powerUp.color;
-          ctx.fillRect(xOffset, 35, remainingWidth, 3);
-          xOffset += 50;
-        }
-        ctx.restore();
+        // Remove the duplicate power-ups display from the canvas
+        // The HTML version in the sidebar will still show the power-ups
+        // ctx.save();
+        // ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+        // ctx.fillRect(10, 10, 150, 30);
+        // let xOffset = 20;
+        // for (const powerUp of activePowerUps) {
+        //   ctx.fillStyle = powerUp.color;
+        //   ctx.fillText(powerUp.icon, xOffset, 30);
+        //   const barWidth = 30;
+        //   const remainingWidth = (powerUp.timeLeft / powerUp.duration) * barWidth;
+        //   ctx.fillStyle = '#FFF';
+        //   ctx.fillRect(xOffset, 35, barWidth, 3);
+        //   ctx.fillStyle = powerUp.color;
+        //   ctx.fillRect(xOffset, 35, remainingWidth, 3);
+        //   xOffset += 50;
+        // }
+        // ctx.restore();
       }
     }
 
@@ -3499,9 +3590,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Function to play sound effects - nå tomme funksjoner
     function playSoundEffect(soundName) {
       // Alle lyder er deaktivert
-      return;
-    }
-
+        return;
+      }
+      
     // Deaktiver mottor-lyd-funksjonene
     function startEngineSound() {
       // Deaktivert
@@ -3510,9 +3601,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function stopEngineSound() {
       // Deaktivert
-      return;
-    }
-
+        return;
+      }
+      
     // Feilhåndtering for lyd - for å sikre at spillet fungerer selv hvis lyd ikke lastes
     for (const sound in sounds) {
       sounds[sound].addEventListener('error', function() {
@@ -3702,12 +3793,16 @@ document.addEventListener('DOMContentLoaded', () => {
           
           const nameCell = document.createElement('span');
           nameCell.className = 'name-cell';
-          nameCell.textContent = entry.name;
+          
+          // Trim name if it's too long (more than 15 chars)
+          const displayName = entry.name.length > 15 ? entry.name.substring(0, 14) + '...' : entry.name;
+          nameCell.textContent = displayName;
           
           // For lange navn, legg til klikk-funksjonalitet
           if (entry.name.length > 15) {
             nameCell.classList.add('clickable-name');
             nameCell.setAttribute('data-fullname', entry.name);
+            nameCell.title = entry.name;
             
             // Legg til click handler
             nameCell.addEventListener('click', function(e) {
@@ -3761,6 +3856,44 @@ document.addEventListener('DOMContentLoaded', () => {
       
       highscoreList.appendChild(table);
       container.appendChild(highscoreList);
+    }
+
+    // Funksjon for å vise sikkerhetstips under spillet
+    function showSafetyTip() {
+      const tip = getRandomSafetyTip();
+      
+      // Opprett et element for sikkerhetstipset
+      const tipElement = document.createElement('div');
+      tipElement.className = 'game-message safety-message';
+      tipElement.textContent = tip;
+      tipElement.style.position = 'absolute';
+      tipElement.style.bottom = '20%';
+      tipElement.style.left = '50%';
+      tipElement.style.transform = 'translateX(-50%)';
+      tipElement.style.backgroundColor = 'rgba(76, 175, 80, 0.8)';
+      tipElement.style.color = 'white';
+      tipElement.style.padding = '10px 15px';
+      tipElement.style.borderRadius = '5px';
+      tipElement.style.maxWidth = '80%';
+      tipElement.style.textAlign = 'center';
+      tipElement.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.3)';
+      tipElement.style.zIndex = '1000';
+      tipElement.style.fontWeight = 'bold';
+      
+      document.querySelector('.game-container').appendChild(tipElement);
+      
+      // Forsinkelse for å sikre at elementet vises
+      setTimeout(() => {
+        tipElement.style.transition = 'opacity 2s';
+        tipElement.style.opacity = '0';
+        
+        // Fjern elementet etter at overgangen er ferdig
+        setTimeout(() => {
+          if (tipElement.parentNode) {
+            tipElement.parentNode.removeChild(tipElement);
+          }
+        }, 2000);
+      }, 5000);
     }
   } catch (error) {
     console.error('Game initialization error:', error);
