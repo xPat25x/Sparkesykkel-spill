@@ -10,11 +10,15 @@ Dette spillet er en del av "Deathtrip" kampanjen som fokuserer på trafikksikker
 
 1. Åpne `index.html` i en nettleser
 2. Klikk på "Start Spill" knappen for å begynne
-3. Bruk piltastene eller WASD for å styre sparkesykkelen:
-   - ↑/W: Beveg opp
-   - ↓/S: Beveg ned
-   - ←/A: Beveg til venstre
-   - →/D: Beveg til høyre
+3. Styr sparkesykkelen:
+   - **På desktop**: Bruk piltastene eller WASD
+     - ↑/W: Beveg opp
+     - ↓/S: Beveg ned
+     - ←/A: Beveg til venstre
+     - →/D: Beveg til høyre
+   - **På mobil/nettbrett**: Bruk berøringskontrollene som vises på skjermen
+     - Trykk på pilknappene for å styre sparkesykkelen
+     - Støtter også kontinuerlig bevegelse ved å gli fingeren mellom knappene
 4. Unngå trafikkhindringer som:
    - Biler
    - Syklister
@@ -39,6 +43,9 @@ Dette spillet er en del av "Deathtrip" kampanjen som fokuserer på trafikksikker
 - **Navneforslag**: Morsomme dynamiske navneforslag basert på spillets hendelser
 - **Power-ups system**: Samle ulike power-ups for å få fordeler
 - **Mobilvennlig design**: Responsivt grensesnitt som fungerer på ulike enheter
+  - Berøringskontroller for mobile enheter
+  - Optimalisert for både høy- og lavoppløselige skjermer
+  - Adaptiv layout som tilpasser seg ulike skjermstørrelser
 - **Dark Mode**: Velg mellom lyst og mørkt tema
 - **Forbedret fysikk**: Mer realistisk bevegelse og kollisjonssystem
 
@@ -55,10 +62,14 @@ Dette spillet er en del av "Deathtrip" kampanjen som fokuserer på trafikksikker
 - CSS3
 - JavaScript (vanilla)
 - LocalStorage for datalagring
+- Responsive design for mobile enheter
+- Touch API for berøringskontroller
 
 ## Spillfunksjoner
 
-- Bevegelseskontroll med piltaster eller WASD
+- Fleksible kontroller:
+  - Tastaturkontroll med piltaster eller WASD
+  - Berøringskontroll på mobile enheter
 - Realistiske trafikkrelaterte hindringer
 - Beruselsessimulering med økende vanskelighetsgrad
 - Økende vanskelighetsgrad over tid
@@ -79,6 +90,13 @@ Dette spillet er en del av "Deathtrip" kampanjen som fokuserer på trafikksikker
 - `Ung i trafikken.png` - Logo for Ung i trafikken
 - `README.md` - Denne dokumentasjonen
 
-## Installasjon
+## Installasjon og kompatibilitet
 
-Ingen spesiell installasjon er nødvendig. Last ned filene og åpne `index.html` i en nettleser for å spille eller trykke på denne linken her til spillett som er ute i web: https://xpat25x.github.io/Sparkesykkel-spill/
+Ingen spesiell installasjon er nødvendig. Last ned filene og åpne `index.html` i en nettleser for å spille.
+
+Spillet fungerer på de fleste moderne nettlesere og enheter:
+- Desktop: Chrome, Firefox, Safari, Edge
+- Mobil: iOS Safari, Android Chrome
+- Nettbrett: iPad, Android-nettbrett
+
+For best opplevelse på mobile enheter, anbefales det å legge til spillet på hjemskjermen for fullskjermsvisning.

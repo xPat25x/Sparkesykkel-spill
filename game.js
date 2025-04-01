@@ -4073,6 +4073,87 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       return array;
     }
+
+    // Etter window.addEventListener('keyup', ...) blokken, legg til følgende kode for touch-kontroller:
+
+    // Touch Controls for mobile devices
+    function setupTouchControls() {
+      const touchUp = document.getElementById('touchUp');
+      const touchDown = document.getElementById('touchDown');
+      const touchLeft = document.getElementById('touchLeft');
+      const touchRight = document.getElementById('touchRight');
+      
+      // Helper function to handle touch events
+      function handleTouchStart(event, keyToSimulate) {
+        event.preventDefault();
+        keys[keyToSimulate] = true;
+        
+        // Auto-start game if touching a control when not running
+        if (!gameRunning && !gameOver) {
+          startGame();
+        }
+      }
+      
+      function handleTouchEnd(event, keyToSimulate) {
+        event.preventDefault();
+        keys[keyToSimulate] = false;
+      }
+      
+      // Add touch event listeners for up button
+      touchUp.addEventListener('touchstart', (e) => handleTouchStart(e, 'ArrowUp'));
+      touchUp.addEventListener('touchend', (e) => handleTouchEnd(e, 'ArrowUp'));
+      
+      // Add touch event listeners for down button
+      touchDown.addEventListener('touchstart', (e) => handleTouchStart(e, 'ArrowDown'));
+      touchDown.addEventListener('touchend', (e) => handleTouchEnd(e, 'ArrowDown'));
+      
+      // Add touch event listeners for left button
+      touchLeft.addEventListener('touchstart', (e) => handleTouchStart(e, 'ArrowLeft'));
+      touchLeft.addEventListener('touchend', (e) => handleTouchEnd(e, 'ArrowLeft'));
+      
+      // Add touch event listeners for right button
+      touchRight.addEventListener('touchstart', (e) => handleTouchStart(e, 'ArrowRight'));
+      touchRight.addEventListener('touchend', (e) => handleTouchEnd(e, 'ArrowRight'));
+      
+      // Handle touch move to support continuous movement
+      document.querySelectorAll('.touch-button').forEach(button => {
+        button.addEventListener('touchmove', (e) => {
+          e.preventDefault();
+          const touch = e.touches[0];
+          const elements = document.elementsFromPoint(touch.clientX, touch.clientY);
+          
+          // Reset all direction keys
+          keys.ArrowUp = false;
+          keys.ArrowDown = false;
+          keys.ArrowLeft = false;
+          keys.ArrowRight = false;
+          
+          // Set the key based on which element the finger is currently over
+          for (const element of elements) {
+            if (element.id === 'touchUp') keys.ArrowUp = true;
+            if (element.id === 'touchDown') keys.ArrowDown = true;
+            if (element.id === 'touchLeft') keys.ArrowLeft = true;
+            if (element.id === 'touchRight') keys.ArrowRight = true;
+          }
+        });
+      });
+      
+      // Prevent default touch behavior on the canvas to avoid scrolling
+      document.getElementById('gameCanvas').addEventListener('touchmove', function(e) {
+        e.preventDefault();
+      }, { passive: false });
+      
+      // Make game buttons work with touch
+      document.querySelectorAll('button').forEach(button => {
+        button.addEventListener('touchstart', (e) => {
+          e.preventDefault();
+          button.click();
+        });
+      });
+    }
+    
+    // Initialize touch controls
+    setupTouchControls();
   } catch (error) {
     console.error('Game initialization error:', error);
     alert('Error starting game: ' + error.message);

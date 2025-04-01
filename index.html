@@ -6,6 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="description" content="Et sparkesykkelspill for Ung i trafikken" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
     <title>Sparkesykkel Spill</title>
     <link rel="stylesheet" href="styles.css" />
     <!-- Favicon -->
@@ -44,6 +46,14 @@
 
         <canvas id="gameCanvas" aria-label="Sparkesykkel Spill" role="img"></canvas>
 
+        <!-- Touch controls for mobile devices -->
+        <div class="touch-controls">
+            <div class="touch-button touch-up" id="touchUp">↑</div>
+            <div class="touch-button touch-down" id="touchDown">↓</div>
+            <div class="touch-button touch-left" id="touchLeft">←</div>
+            <div class="touch-button touch-right" id="touchRight">→</div>
+        </div>
+
         <div class="active-powerups" role="status" aria-live="polite">
             <div class="powerup-info">
                 <h3>Aktive Power-ups:</h3>
@@ -57,7 +67,7 @@
             <button id="highscoreBtn" aria-label="Vis highscores">Vis Highscores</button>
 
             <div class="controls-help">
-                <p>Kontroller: Piltaster eller WASD</p>
+                <p>Kontroller: Piltaster, WASD eller berøring</p>
                 <p>
                     Samle power-ups:
                     <span class="powerup-icon" aria-hidden="true">🛡️</span> <span>Skjold</span>,
