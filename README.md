@@ -81,4 +81,4 @@ Dette spillet er en del av "Deathtrip" kampanjen som fokuserer på trafikksikker
 
 ## Installasjon
 
-Ingen spesiell installasjon er nødvendig. Last ned filene og åpne `index.html` i en nettleser for å spille.
+Ingen spesiell installasjon er nødvendig. Last ned filene og åpne `index.html` i en nettleser for å spille eller trykke på denne linken her til spillett som er ute i web: https://xpat25x.github.io/Sparkesykkel-spill/
