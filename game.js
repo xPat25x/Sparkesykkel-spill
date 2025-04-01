@@ -1435,55 +1435,49 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       
       // Gradually increase drunk level based on score milestones
-      if (isDrunk && drunkLevel < 0.8) {
-        // Check if we've passed a new score milestone (every 5 points)
-        const currentScoreThreshold = Math.floor(score / 5) * 5;
+      if (isDrunk && drunkLevel < 1.0) {
+        // Set drunkLevel based directly on the score (1% per point, up to 100%)
+        const newDrunkLevel = Math.min(1.0, score / 100);
         
-        // If we've reached a new score threshold (5, 10, 15, etc.)
-        if (currentScoreThreshold > lastScoreThreshold && score >= 5) {
-          // Update the last threshold we passed
-          lastScoreThreshold = currentScoreThreshold;
-          
-          // Increase drunk level
-          const increment = 0.1;
+        // If the drunk level has increased, show effects
+        if (newDrunkLevel > drunkLevel) {
           const oldLevel = drunkLevel;
-          drunkLevel += increment;
+          drunkLevel = newDrunkLevel;
           
-          // Cap at maximum drunk level
-          drunkLevel = Math.min(0.8, drunkLevel);
-          
-          // Play drunk level up sound
-          playSoundEffect('drunkLevel');
-          
-          // Show message about increasing drunkenness
-          if (drunkLevel > 0.1) {
-            showMessage("Beruselsen øker! 🍺", 60);
+          // Play drunk level up sound if crossing a threshold
+          if (Math.floor(oldLevel * 10) < Math.floor(drunkLevel * 10)) {
+            playSoundEffect('drunkLevel');
             
-            // Add dramatic effect when drunk level increases
-            // Flash effect
-            const flashOverlay = document.createElement('div');
-            flashOverlay.style.position = 'absolute';
-            flashOverlay.style.top = '0';
-            flashOverlay.style.left = '0';
-            flashOverlay.style.width = '100%';
-            flashOverlay.style.height = '100%';
-            flashOverlay.style.backgroundColor = 'rgba(255, 200, 100, 0.3)';
-            flashOverlay.style.pointerEvents = 'none';
-            flashOverlay.style.zIndex = '1000';
-            flashOverlay.style.transition = 'opacity 0.5s';
+            // Show message about increasing drunkenness
+            if (drunkLevel > 0.1) {
+              showMessage("Beruselsen øker! 🍺", 60);
+              
+              // Add dramatic effect when drunk level increases
+              // Flash effect
+              const flashOverlay = document.createElement('div');
+              flashOverlay.style.position = 'absolute';
+              flashOverlay.style.top = '0';
+              flashOverlay.style.left = '0';
+              flashOverlay.style.width = '100%';
+              flashOverlay.style.height = '100%';
+              flashOverlay.style.backgroundColor = 'rgba(255, 200, 100, 0.3)';
+              flashOverlay.style.pointerEvents = 'none';
+              flashOverlay.style.zIndex = '1000';
+              flashOverlay.style.transition = 'opacity 0.5s';
+              
+              document.body.appendChild(flashOverlay);
+              
+              setTimeout(() => {
+                flashOverlay.style.opacity = '0';
+                setTimeout(() => flashOverlay.remove(), 500);
+              }, 300);
+              
+              // Add a camera shake effect
+              cameraShake = 5 * drunkLevel;
+            }
             
-            document.body.appendChild(flashOverlay);
-            
-            setTimeout(() => {
-              flashOverlay.style.opacity = '0';
-              setTimeout(() => flashOverlay.remove(), 500);
-            }, 300);
-            
-            // Add a camera shake effect
-            cameraShake = 5 * drunkLevel;
+            console.log(`Drunk level increased to ${drunkLevel.toFixed(2)} at score ${score}`);
           }
-          
-          console.log(`Drunk level increased to ${drunkLevel.toFixed(2)} at score ${score}`);
         }
       }
       
@@ -1848,9 +1842,9 @@ document.addEventListener('DOMContentLoaded', () => {
         let drunkMessage = '';
         if (drunkLevel >= 1.0) {
           drunkMessage = '🍺🍺🍺 DRITINGS!';
-        } else if (drunkLevel >= 0.5) {
+        } else if (drunkLevel >= 0.7) {
           drunkMessage = '🍺🍺 PÅ EN SNURR!';
-        } else if (drunkLevel >= 0.3) {
+        } else if (drunkLevel >= 0.4) {
           drunkMessage = '🍺🍺 BRISEN!';
         } else if (drunkLevel >= 0.1) {
           drunkMessage = '🍺 LETTERE PÅVIRKET';
@@ -1879,9 +1873,9 @@ document.addEventListener('DOMContentLoaded', () => {
           
           // Meter color varies with drunk level
           let meterColor;
-          if (drunkLevel >= 0.7) {
+          if (drunkLevel >= 0.9) {
             meterColor = 'rgba(255, 0, 0, 0.8)'; // Red for very drunk
-          } else if (drunkLevel >= 0.4) {
+          } else if (drunkLevel >= 0.5) {
             meterColor = 'rgba(255, 100, 0, 0.8)'; // Orange for moderately drunk
           } else {
             meterColor = 'rgba(255, 200, 0, 0.8)'; // Yellow for lightly drunk
