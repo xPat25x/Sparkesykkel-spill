@@ -109,6 +109,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // *** BERUSELSES-VARIABLER ***
     let isDrunk = true; // Hold true for å aktivere systemet
     let drunkLevel = 0; // Start helt edru (0)
+    let playerName = localStorage.getItem('playerName') || 'Anonym'; // Lagre spillernavn mellom økter
     let swayAngle = 0;
     let visionBlur = 0;
     let lastRandomDirection = 0;
@@ -1446,37 +1447,37 @@ document.addEventListener('DOMContentLoaded', () => {
           
           // Play drunk level up sound if crossing a threshold
           if (Math.floor(oldLevel * 10) < Math.floor(drunkLevel * 10)) {
-            playSoundEffect('drunkLevel');
+          playSoundEffect('drunkLevel');
+          
+          // Show message about increasing drunkenness
+          if (drunkLevel > 0.1) {
+            showMessage("Beruselsen øker! 🍺", 60);
             
-            // Show message about increasing drunkenness
-            if (drunkLevel > 0.1) {
-              showMessage("Beruselsen øker! 🍺", 60);
-              
-              // Add dramatic effect when drunk level increases
-              // Flash effect
-              const flashOverlay = document.createElement('div');
-              flashOverlay.style.position = 'absolute';
-              flashOverlay.style.top = '0';
-              flashOverlay.style.left = '0';
-              flashOverlay.style.width = '100%';
-              flashOverlay.style.height = '100%';
-              flashOverlay.style.backgroundColor = 'rgba(255, 200, 100, 0.3)';
-              flashOverlay.style.pointerEvents = 'none';
-              flashOverlay.style.zIndex = '1000';
-              flashOverlay.style.transition = 'opacity 0.5s';
-              
-              document.body.appendChild(flashOverlay);
-              
-              setTimeout(() => {
-                flashOverlay.style.opacity = '0';
-                setTimeout(() => flashOverlay.remove(), 500);
-              }, 300);
-              
-              // Add a camera shake effect
-              cameraShake = 5 * drunkLevel;
-            }
+            // Add dramatic effect when drunk level increases
+            // Flash effect
+            const flashOverlay = document.createElement('div');
+            flashOverlay.style.position = 'absolute';
+            flashOverlay.style.top = '0';
+            flashOverlay.style.left = '0';
+            flashOverlay.style.width = '100%';
+            flashOverlay.style.height = '100%';
+            flashOverlay.style.backgroundColor = 'rgba(255, 200, 100, 0.3)';
+            flashOverlay.style.pointerEvents = 'none';
+            flashOverlay.style.zIndex = '1000';
+            flashOverlay.style.transition = 'opacity 0.5s';
             
-            console.log(`Drunk level increased to ${drunkLevel.toFixed(2)} at score ${score}`);
+            document.body.appendChild(flashOverlay);
+            
+            setTimeout(() => {
+              flashOverlay.style.opacity = '0';
+              setTimeout(() => flashOverlay.remove(), 500);
+            }, 300);
+            
+            // Add a camera shake effect
+            cameraShake = 5 * drunkLevel;
+          }
+          
+          console.log(`Drunk level increased to ${drunkLevel.toFixed(2)} at score ${score}`);
           }
         }
       }
@@ -2691,6 +2692,51 @@ document.addEventListener('DOMContentLoaded', () => {
         nameInput.style.maxHeight = '150px';
         nameInput.style.minHeight = '60px';
         
+        // Pre-populate with saved name if available
+        if (playerName && playerName !== 'Anonym') {
+          nameInput.value = playerName;
+        }
+        
+        // Add name suggestions to make it more fun
+        const suggestionsContainer = document.createElement('div');
+        suggestionsContainer.className = 'name-suggestions';
+        suggestionsContainer.style.marginTop = '5px';
+        suggestionsContainer.style.fontSize = '14px';
+        suggestionsContainer.style.color = '#aaa';
+        
+        // Dynamic name suggestions based on score and game events
+        const nameSuggestions = generateNameSuggestions(score, isDrunk ? drunkLevel : 0);
+        
+        const suggestionsLabel = document.createElement('span');
+        suggestionsLabel.textContent = 'Forslag: ';
+        suggestionsContainer.appendChild(suggestionsLabel);
+        
+        nameSuggestions.forEach((suggestion, index) => {
+          const suggestionEl = document.createElement('span');
+          suggestionEl.className = 'name-suggestion';
+          suggestionEl.textContent = suggestion;
+          suggestionEl.style.cursor = 'pointer';
+          suggestionEl.style.marginRight = '10px';
+          suggestionEl.style.color = '#ffeb3b';
+          suggestionEl.style.textDecoration = 'underline';
+          
+          suggestionEl.addEventListener('click', () => {
+            nameInput.value = suggestion;
+            nameInput.focus();
+          });
+          
+          suggestionsContainer.appendChild(suggestionEl);
+          
+          // Add a separator except for the last item
+          if (index < nameSuggestions.length - 1) {
+            const separator = document.createElement('span');
+            separator.textContent = ' | ';
+            separator.style.color = '#666';
+            suggestionsContainer.appendChild(separator);
+          }
+        });
+        
+        // Rest of the code remains the same
         // Auto-resize funksjon for tekstfeltet
         nameInput.addEventListener('input', function() {
           this.style.height = 'auto';
@@ -2701,8 +2747,6 @@ document.addEventListener('DOMContentLoaded', () => {
         nameInput.addEventListener('keypress', (event) => {
           if (event.key === 'Enter' && event.shiftKey === false) {
             event.preventDefault();
-            // Bruk nameInput.value direkte uten trim
-            const playerName = nameInput.value || 'Anonym';
             submitBtn.click();
           }
         });
@@ -2711,8 +2755,29 @@ document.addEventListener('DOMContentLoaded', () => {
         submitBtn.className = 'submit-name-btn';
         submitBtn.textContent = 'Lagre Score';
         
+        // Add checkbox for saving name
+        const saveNameContainer = document.createElement('div');
+        saveNameContainer.className = 'save-name-container';
+        saveNameContainer.style.marginTop = '10px';
+        saveNameContainer.style.marginBottom = '10px';
+        
+        const saveNameCheckbox = document.createElement('input');
+        saveNameCheckbox.type = 'checkbox';
+        saveNameCheckbox.id = 'saveNameCheckbox';
+        saveNameCheckbox.checked = playerName !== 'Anonym'; // Pre-check if name is saved
+        
+        const saveNameLabel = document.createElement('label');
+        saveNameLabel.htmlFor = 'saveNameCheckbox';
+        saveNameLabel.textContent = 'Husk navnet mitt til neste gang';
+        saveNameLabel.style.marginLeft = '5px';
+        
+        saveNameContainer.appendChild(saveNameCheckbox);
+        saveNameContainer.appendChild(saveNameLabel);
+        
         nameForm.appendChild(nameLabel);
         nameForm.appendChild(nameInput);
+        nameForm.appendChild(suggestionsContainer);
+        nameForm.appendChild(saveNameContainer);
         nameForm.appendChild(submitBtn);
         
         gameOverDiv.appendChild(nameForm);
@@ -2722,18 +2787,32 @@ document.addEventListener('DOMContentLoaded', () => {
           const inputField = document.getElementById('playerName');
           if (inputField) {
             inputField.focus();
+            // Place cursor at the end of the text
+            if (inputField.value) {
+              inputField.selectionStart = inputField.selectionEnd = inputField.value.length;
+            }
           }
         }, 100);
         
         // Lagre highscore når brukeren sender inn
         submitBtn.addEventListener('click', () => {
-          // Bruk const playerName = nameInput.value.trim() || 'Anonym'; 
-          // i stedet for å fjerne eventuell validering som filtrerer tegn
-          const playerName = nameInput.value || 'Anonym';
-          const savedHighscores = saveHighscore(playerName, score);
+          // Get the entered name
+          const enteredName = nameInput.value || 'Anonym';
+          
+          // Save the name if the checkbox is checked
+          if (document.getElementById('saveNameCheckbox').checked) {
+            localStorage.setItem('playerName', enteredName);
+            playerName = enteredName; // Update the variable
+          } else if (playerName === enteredName) {
+            // If they unchecked the box but were using the saved name, remove it
+            localStorage.removeItem('playerName');
+            playerName = 'Anonym';
+          }
+          
+          const savedHighscores = saveHighscore(enteredName, score);
           
           // Sjekk om spilleren fikk en topplassering (topp 3)
-          const playerRank = savedHighscores.findIndex(entry => entry.name === playerName && entry.score === score) + 1;
+          const playerRank = savedHighscores.findIndex(entry => entry.name === enteredName && entry.score === score) + 1;
           
           // Fjern inputfeltet
           nameForm.remove();
@@ -3888,6 +3967,103 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         }, 2000);
       }, 5000);
+    }
+
+    // Add this function after getRandomSafetyTip
+    function generateNameSuggestions(playerScore, drunkLevel) {
+      const allSuggestions = [
+        // Høye poeng-relaterte navn (score >= 100)
+        'Sparkesykkel Ekspert',
+        'Gatens Konge',
+        'Mester Svinger',
+        'Trafikklegenden',
+        'Proff Kjører',
+        'Veiens Vokter',
+        'Elite Sparkist',
+        'Sparkemesteren',
+        
+        // Middels poeng-relaterte navn (score >= 50)
+        'Rask Rytter',
+        'Skarp Svinger',
+        'Dyktig Kjører',
+        'Hurtig Helt',
+        'Vei Virtuos',
+        'Tempo Traver',
+        'Raske Reflexer',
+        
+        // Nybegynner-relaterte navn (score < 50)
+        'Nybegynner',
+        'Forsiktig Fører',
+        'Sakte men Sikker',
+        'Lærevillig',
+        'Lovende Talent',
+        
+        // Beruselses-relaterte navn (drunkLevel > 0.3)
+        'Promillekjører',
+        'Vinglete Vesen',
+        'Brisen Bråker',
+        'Ustø Utøver',
+        'Slingrende Sjåfør',
+        'Sjanglende Sparkist',
+        
+        // Generelt morsomme navn
+        'SparkeMaster',
+        'TrafikkHelt',
+        'VeiensBeste',
+        'RaskeRover',
+        'FullGass',
+        'ZigZag Kongen',
+        'Fartsfylt',
+        'Lynspark',
+        'KongeSparkeren',
+        'AsfaltsAtlet',
+        'SparkeSjef',
+        'Svingkongen',
+        'Hjultrollet',
+        'Lynspark',
+        'VeiGlider',
+        'Sparkefanten',
+        'Trafikktamer'
+      ];
+      
+      const suggestions = [];
+      
+      // Legg til score-baserte forslag
+      if (playerScore >= 100) {
+        // Legg til høypoeng-relaterte navn i utvalget
+        suggestions.push(...allSuggestions.slice(0, 8).filter(() => Math.random() > 0.5));
+      } else if (playerScore >= 50) {
+        // Legg til mellompoeng-relaterte navn i utvalget
+        suggestions.push(...allSuggestions.slice(8, 15).filter(() => Math.random() > 0.5));
+      } else {
+        // Legg til nybegynner-relaterte navn i utvalget
+        suggestions.push(...allSuggestions.slice(15, 20).filter(() => Math.random() > 0.5));
+      }
+      
+      // Legg til beruselses-relaterte navn hvis spilleren var beruset
+      if (drunkLevel > 0.3) {
+        suggestions.push(...allSuggestions.slice(20, 26).filter(() => Math.random() > 0.6));
+      }
+      
+      // Legg til generelt morsomme navn
+      suggestions.push(...allSuggestions.slice(26).filter(() => Math.random() > 0.7));
+      
+      // Hvis vi har for få forslag, legg til flere generelle navn
+      if (suggestions.length < 3) {
+        const remainingNames = allSuggestions.filter(name => !suggestions.includes(name));
+        suggestions.push(...shuffleArray(remainingNames).slice(0, 3 - suggestions.length));
+      }
+      
+      // Returner nøyaktig 3 tilfeldige forslag
+      return shuffleArray(suggestions).slice(0, 3);
+    }
+    
+    function shuffleArray(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+      return array;
     }
   } catch (error) {
     console.error('Game initialization error:', error);

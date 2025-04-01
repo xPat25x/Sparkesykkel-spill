@@ -1044,3 +1044,45 @@ button:focus-visible {
   border-radius: 50%;
   z-index: 25;
 }
+
+/* Styling for the save name container */
+.save-name-container {
+  display: flex;
+  align-items: center;
+  margin: 10px 0;
+  font-size: 15px;
+  color: #ccc;
+}
+
+.save-name-container input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  margin-right: 8px;
+  cursor: pointer;
+}
+
+.save-name-container label {
+  cursor: pointer;
+}
+
+/* Name suggestions styling */
+.name-suggestions {
+  margin: 10px 0;
+  line-height: 1.5;
+  background-color: rgba(0, 0, 0, 0.2);
+  padding: 8px 12px;
+  border-radius: 5px;
+  border-left: 3px solid var(--primary-color);
+}
+
+.name-suggestion {
+  display: inline-block;
+  margin: 2px 5px;
+  transition: all 0.2s ease;
+}
+
+.name-suggestion:hover {
+  color: white !important;
+  transform: scale(1.05);
+  text-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+}
