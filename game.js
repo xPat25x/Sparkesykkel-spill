@@ -492,6 +492,9 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.restore();
       },
       update(keys, speedFactor) {
+        // Don't process movement if game is not running
+        if (!gameRunning) return;
+        
         // Oppdater berulelsesrelaterte verdier
         if (isDrunk && drunkLevel > 0) {
           // Hyppigere oppdateringer for svingevinkel for å forbedre responsivitet
@@ -2479,6 +2482,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function startGame() {
       if (gameRunning) return;
+      
+      // Reset all key states to prevent stuck movement from pre-game key presses
+      for (const key in keys) {
+        keys[key] = false;
+      }
       
       // Cancel any ongoing animations
       cancelAnimationFrame(animationId);
