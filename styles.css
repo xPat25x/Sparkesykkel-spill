@@ -75,7 +75,7 @@ body {
     gap: 20px;
     padding: 8px;
     border-radius: 8px;
-    background-color: white;
+    background-color: white !important;
 }
 
 .logo {
@@ -406,6 +406,7 @@ button:focus-visible {
     }
     
     .logos {
+        background-color: white !important;
         order: 1;
     }
     
@@ -1185,4 +1186,9 @@ button:focus-visible {
   .touch-right {
     top: 50px;
   }
+}
+
+/* Ensure logo background stays white in all conditions */
+.dark-mode .logos {
+    background-color: white !important;
 }
