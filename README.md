@@ -102,7 +102,7 @@ Spillet fungerer på de fleste moderne nettlesere og enheter:
 - Mobil: iOS Safari, Android Chrome
 - Nettbrett: iPad, Android-nettbrett
 
-For best opplevelse på mobile enheter, anbefales det og zoome ut. Da had oversikt over hele bane og hvorda du skal styre.
+For best opplevelse på mobile enheter, anbefales det og zoome ut. Da har du oversikt over hele banen og hvordan du skal styre.
 
 Best alternativer å bruke PC/Laptop eller nettbrett.
 
