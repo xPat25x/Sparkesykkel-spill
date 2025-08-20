@@ -92,11 +92,18 @@ Dette spillet er en del av "Deathtrip" kampanjen som fokuserer på trafikksikker
 
 ## Installasjon og kompatibilitet
 
-Ingen spesiell installasjon er nødvendig. Last ned filene og åpne `index.html` i en nettleser for å spille.
+Ingen spesiell installasjon er nødvendig. 
+Lim inn til nettleseren: https://xpat25x.github.io/Sparkesykkel-spill/
+
+Da får du til spillet!
 
 Spillet fungerer på de fleste moderne nettlesere og enheter:
 - Desktop: Chrome, Firefox, Safari, Edge
 - Mobil: iOS Safari, Android Chrome
 - Nettbrett: iPad, Android-nettbrett
 
-For best opplevelse på mobile enheter, anbefales det å legge til spillet på hjemskjermen for fullskjermsvisning.
+For best opplevelse på mobile enheter, anbefales det og zoome ut. Da had oversikt over hele bane og hvorda du skal styre.
+
+Best alternativer å bruke PC/Laptop eller nettbrett.
+
+Kos deg!!😁
