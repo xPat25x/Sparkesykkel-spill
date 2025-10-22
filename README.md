@@ -95,7 +95,7 @@ Dette spillet er en del av "Deathtrip" kampanjen som fokuserer på trafikksikker
 Ingen spesiell installasjon er nødvendig. 
 Lim inn til nettleseren: https://xpat25x.github.io/Sparkesykkel-spill/
 
-Da får du til spillet!
+Da går du til spillet!
 
 Spillet fungerer på de fleste moderne nettlesere og enheter:
 - Desktop: Chrome, Firefox, Safari, Edge
