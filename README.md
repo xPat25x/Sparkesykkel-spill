@@ -8,8 +8,8 @@ Dette spillet er en del av "Deathtrip" kampanjen som fokuserer på trafikksikker
 
 ## Hvordan spille
 
-1. Åpne `index.html` i en nettleser
-2. Klikk på "Start Spill" knappen for å begynne
+1. Åpne spillet ved å trykke på denne lenken: https://xpat25x.github.io/Sparkesykkel-spill/
+2. Når siden er lastet, klikk på "Start Spill" knappen for å begynne
 3. Styr sparkesykkelen:
    - **På desktop**: Bruk piltastene eller WASD
      - ↑/W: Beveg opp
@@ -92,18 +92,19 @@ Dette spillet er en del av "Deathtrip" kampanjen som fokuserer på trafikksikker
 
 ## Installasjon og kompatibilitet
 
-Ingen spesiell installasjon er nødvendig. 
-Lim inn til nettleseren: https://xpat25x.github.io/Sparkesykkel-spill/
+Ingen spesiell installasjon er nødvendig.
+Åpne denne lenken i nettleseren: https://xpat25x.github.io/Sparkesykkel-spill/
 
-Da går du til spillet!
+Da kan du spille med en gang!
 
 Spillet fungerer på de fleste moderne nettlesere og enheter:
+
 - Desktop: Chrome, Firefox, Safari, Edge
 - Mobil: iOS Safari, Android Chrome
 - Nettbrett: iPad, Android-nettbrett
 
-For best opplevelse på mobile enheter, anbefales det og zoome ut. Da har du oversikt over hele banen og hvordan du skal styre.
+For best opplevelse på mobile enheter, anbefales det å zoome ut. Da har du oversikt over hele banen og hvordan du skal styre.
 
-Best alternativer å bruke PC/Laptop eller nettbrett.
+Beste alternativ er å bruke PC/Laptop eller nettbrett.
 
-Kos deg!!😁
+Kos deg! 😁
