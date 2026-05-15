@@ -515,9 +515,9 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         }
           
-        // Raskere nedbremsing for mer responsiv kontroll
-        this.speedX *= 0.85;
-        this.speedY *= 0.85;
+        // Nedbremsing – høyere verdi = mindre friksjon, spilleren holder farten bedre
+        this.speedX *= 0.93;
+        this.speedY *= 0.93;
         
         // Normale kontroller, men påvirket av beruselsesnivå
         if ((keys.ArrowLeft || keys.a) && this.x > this.width / 2) {
@@ -1918,7 +1918,7 @@ document.addEventListener('DOMContentLoaded', () => {
       let zoomFactor = 1;
       let maxZoom = 1.4; // Same zoom level for all crashes
       let zoomStep = 0.03; // Slightly faster zoom
-      let slowMotionFrames = collidedObstacle.isCar || collidedObstacle.type === 'cyclist' ? 20 : 10; // Reduced from 40/20 to 20/10
+      let slowMotionFrames = collidedObstacle.isCar || collidedObstacle.type === 'cyclist' ? 6 : 3;
       
       // New: Create explosion particles for car and cyclist collisions
       const particles = [];
@@ -2031,7 +2031,7 @@ document.addEventListener('DOMContentLoaded', () => {
         for (let i = particles.length - 1; i >= 0; i--) {
           const p = particles[i];
           // Apply slow motion to particles
-          const speedFactor = slowMotionFrames > 0 ? 0.3 : 1;
+          const speedFactor = slowMotionFrames > 0 ? 0.75 : 1;
           p.x += p.vx * speedFactor;
           p.y += p.vy * speedFactor;
           p.vy += 0.1 * speedFactor; // Gravity
@@ -2093,7 +2093,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         // Slow motion effect
-        const progressStep = slowMotionFrames > 0 ? 0.5 : 1.0; // Increased from 0.2/0.5 to 0.5/1.0
+        const progressStep = slowMotionFrames > 0 ? 0.85 : 1.0;
         if (slowMotionFrames > 0) {
           slowMotionFrames--;
         }
@@ -3026,7 +3026,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let powerUpTypes = [
       { name: 'shield', color: '#64B5F6', duration: 350, icon: '🛡️' },
       { name: 'speed', color: '#FFD54F', duration: 250, icon: '⚡' },
-      { name: 'slowTime', color: '#9C27B0', duration: 180, icon: '⏱️' },
+      { name: 'slowTime', color: '#9C27B0', duration: 120, icon: '⏱️' },
       { name: 'points', color: '#E91E63', duration: 1, icon: '💯' }
     ];
     activePowerUps = [];
@@ -3111,7 +3111,7 @@ document.addEventListener('DOMContentLoaded', () => {
         player.speed *= 1.8;
       } else if (collectible.type === 'slowTime') {
         for (const obstacle of obstacles) {
-          obstacle.speed /= 2.5;
+          obstacle.speed /= 1.35;
         }
       } else if (collectible.type === 'points') {
         score += 10;
@@ -3153,7 +3153,7 @@ document.addEventListener('DOMContentLoaded', () => {
             player.speed /= 1.8;
           } else if (activePowerUps[i].type === 'slowTime') {
             for (const obstacle of obstacles) {
-              obstacle.speed *= 2.5;
+              obstacle.speed *= 1.35;
             }
           }
           activePowerUps.splice(i, 1);
