@@ -1608,3 +1608,267 @@ kbd {
 #highscoreBtn {
   margin-left: 0;
 }
+
+/* Feedback lives over the road; controls keep their established screen space. */
+.drive-hud {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 10px 12px;
+  background: #0c170de8;
+  border: 1px solid #ffffff26;
+  border-radius: 12px;
+  pointer-events: none;
+}
+.drive-hud span {
+  font-size: 8px;
+  letter-spacing: 0.1em;
+  color: #c2ccc0;
+}
+.run-time {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.run-time strong {
+  font-size: 17px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.influence-status {
+  width: 92px;
+}
+.influence-status > div:first-child {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+.influence-status strong {
+  color: var(--score-color);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.influence-meter {
+  height: 4px;
+  background: #ffffff20;
+  border-radius: 5px;
+  margin-top: 6px;
+  overflow: hidden;
+}
+.influence-meter > span {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: var(--score-color);
+  transition: width 0.2s;
+}
+.influence-status[data-level="high"] strong {
+  color: #ff9b89;
+}
+.influence-status[data-level="high"] .influence-meter > span {
+  background: #f44336;
+}
+[data-state="ready"] .drive-hud,
+[data-state="collision"] .drive-hud,
+[data-state="finished"] .drive-hud {
+  display: none;
+}
+.pickup-message {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100% - 24px);
+  padding: 9px 16px;
+  background: #10200ff2;
+  border: 1px solid var(--feedback-color, #4caf50);
+  color: #fff;
+  border-radius: 30px;
+  font-size: 13px;
+  font-weight: 650;
+  text-align: center;
+  pointer-events: none;
+  z-index: 4;
+  box-shadow: 0 4px 20px #0003;
+}
+.pickup-message.is-record {
+  color: var(--score-color);
+  border-color: var(--score-color);
+}
+.score-pop {
+  animation: scorePop 0.28s ease-out;
+}
+@keyframes scorePop {
+  40% {
+    transform: scale(1.2);
+    color: #fff;
+  }
+}
+.pause-screen {
+  display: none;
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  background: #081207ed;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  text-align: center;
+  gap: 14px;
+  padding: 20px;
+}
+[data-state="paused"] .pause-screen {
+  display: flex;
+}
+.pause-screen h2 {
+  font-size: clamp(28px, 4vw, 42px);
+  letter-spacing: -0.04em;
+}
+.pause-screen p {
+  color: #c8d3c4;
+  font-size: 13px;
+}
+.pause-screen small {
+  font-size: 11px;
+  color: var(--muted);
+}
+.pause-screen .welcome-tag {
+  margin: 0;
+}
+.pause-screen .primary-button {
+  min-width: 190px;
+  margin-top: 4px;
+}
+.pause-button {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 10px 12px;
+  font-size: 14px;
+  border-color: #4caf5055;
+  background: #4caf5018;
+}
+[data-state="playing"] .pause-button,
+[data-state="paused"] .pause-button {
+  display: flex;
+}
+[data-state="playing"] .running-message,
+[data-state="paused"] .running-message {
+  display: none;
+}
+[data-state="paused"] .touch-button {
+  opacity: 0.35;
+}
+.sound-option {
+  width: 56px;
+  padding: 8px 12px;
+  flex: none;
+}
+.sound-option[aria-pressed="true"] {
+  border-color: var(--primary-color);
+  background: #4caf5033;
+}
+.run-summary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 18px 0;
+  text-align: left;
+}
+.run-summary > div {
+  padding: 12px 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #ffffff05;
+}
+.run-summary dt {
+  font-size: 11px;
+  color: var(--muted);
+}
+.run-summary dd {
+  font-size: 23px;
+  font-weight: 650;
+  margin-top: 4px;
+  font-variant-numeric: tabular-nums;
+}
+.game-over .record-badge {
+  color: var(--score-color);
+  font-size: 13px;
+  padding: 8px 12px;
+  border: 1px solid #ffd70040;
+  background: #ffd7000c;
+  border-radius: 8px;
+}
+.result-restart {
+  position: sticky;
+  bottom: 0;
+  width: 100%;
+  margin: 18px 0 0;
+  min-height: 48px;
+  justify-content: center;
+  box-shadow: 0 -8px 20px #111b10;
+  z-index: 3;
+}
+.safety-message {
+  top: auto !important;
+  bottom: 12px !important;
+}
+[data-state="paused"] .game-message,
+[data-state="paused"] .pickup-message {
+  visibility: hidden;
+}
+@media (max-width: 900px) and (orientation: portrait) {
+  .pause-button {
+    font-size: 14px;
+    min-height: 44px;
+  }
+}
+@media (max-height: 400px) and (orientation: landscape) {
+  .pause-button {
+    font-size: 11px;
+    padding: 6px;
+    min-height: 44px;
+  }
+  .pause-button > span {
+    display: none;
+  }
+  .pause-screen {
+    gap: 10px;
+    padding: 12px;
+  }
+  .pause-screen .welcome-tag,
+  .pause-screen small {
+    display: none;
+  }
+  .drive-hud {
+    top: 8px;
+    left: 8px;
+    padding: 8px 10px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .score-pop {
+    animation: none;
+  }
+  .influence-meter > span {
+    transition: none;
+  }
+}
+
+.powerup-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 24px;
+  height: 24px;
+}
+.powerup-icon svg {
+  display: block;
+}
