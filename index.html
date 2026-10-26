@@ -1,108 +1,293 @@
-<!DOCTYPE html>
-<html lang="no">
-
-<head>
+<!doctype html>
+<html lang="nb">
+  <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="description" content="Et sparkesykkelspill for Ung i trafikken" />
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="mobile-web-app-capable" content="yes">
-    <title>Sparkesykkel Spill</title>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta
+      name="description"
+      content="Deathtrip – et sparkesykkelspill om trafikksikkerhet fra Ung i trafikken."
+    />
+    <meta name="theme-color" content="#2c5e1a" />
+    <title>Sparkesykkel | Deathtrip</title>
+    <link rel="icon" href="deathtrip.png" type="image/png" />
     <link rel="stylesheet" href="styles.css" />
-    <!-- Favicon -->
-    <link rel="icon" href="deathtrip.png" type="image/png">
-</head>
-
-<body>
-    <div class="game-container">
-        <div class="game-header" role="banner">
-            <div class="top-bar">
-                <div class="logos">
-                    <img src="deathtrip.png" alt="Deathtrip Logo" class="logo deathtrip-logo">
-                    <img src="Ung i trafikken.png" alt="Ung i trafikken Logo" class="logo uit-logo">
-                </div>
-                <div class="theme-toggle">
-                    <label class="switch" for="darkModeToggle">
-                        <input type="checkbox" id="darkModeToggle" aria-label="Toggle dark mode">
-                        <span class="slider round"></span>
-                    </label>
-                    <span id="theme-label">Dark Mode</span>
-                </div>
-                <div class="button-container">
-                    <div class="button-wrapper">
-                        <button id="soundToggle" aria-label="Toggle sound" class="sound-toggle">🔊</button>
-                        <span class="button-label">Lyd</span>
-                    </div>
-                    <div class="button-wrapper">
-                        <button id="clearDataBtn" aria-label="Slett all lagret data" class="clear-data-btn">🗑️</button>
-                        <span class="button-label">Slett data</span>
-                    </div>
-                </div>
+    <script src="game.js" defer></script>
+    <script src="interface.js" defer></script>
+  </head>
+  <body>
+    <main
+      class="game-container"
+      data-state="ready"
+      aria-label="Sparkesykkelspillet"
+    >
+      <header class="game-header">
+        <div class="brand">
+          <div class="logos" aria-label="Deathtrip og Ung i trafikken">
+            <img
+              src="deathtrip.png"
+              alt="Deathtrip"
+              class="deathtrip-logo"
+              width="2000"
+              height="640"
+            />
+            <span class="logo-divider" aria-hidden="true"></span>
+            <img
+              src="Ung i trafikken.png"
+              alt="Ung i trafikken"
+              class="uit-logo"
+              width="3600"
+              height="847"
+            />
+          </div>
+          <div class="game-title">
+            <span class="eyebrow">DEATHTRIP</span>
+            <h1>Sparkesykkel</h1>
+          </div>
+        </div>
+        <nav class="toolbar" aria-label="Spillverktøy">
+          <button
+            id="helpBtn"
+            class="icon-button"
+            aria-label="Slik spiller du"
+            title="Slik spiller du"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="12" r="9" />
+              <path d="M9.5 9a2.5 2.5 0 0 1 5 0c0 2-2.5 2-2.5 4M12 16h.01" />
+            </svg>
+          </button>
+          <button
+            id="fullscreenBtn"
+            class="icon-button"
+            aria-label="Åpne fullskjerm"
+            title="Fullskjerm"
+            hidden
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5" />
+            </svg>
+          </button>
+          <button
+            id="settingsBtn"
+            class="icon-button"
+            aria-label="Innstillinger"
+            title="Innstillinger"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 6h16M4 12h16M4 18h16" />
+              <circle cx="8" cy="6" r="2" />
+              <circle cx="16" cy="12" r="2" />
+              <circle cx="10" cy="18" r="2" />
+            </svg>
+          </button>
+        </nav>
+      </header>
+      <section class="score-strip" aria-label="Poeng og rekord">
+        <div class="score-display">
+          <span class="stat-label">POENG</span><strong id="score">0</strong>
+        </div>
+        <div class="score-display">
+          <span class="stat-label">DIN REKORD</span
+          ><strong id="highScore">0</strong>
+        </div>
+        <span id="sessionStatus" class="session-status" role="status"
+          ><span class="status-dot" aria-hidden="true"></span
+          ><span id="sessionLabel">Klar for start</span></span
+        >
+      </section>
+      <div class="game-layout">
+        <section class="game-stage" aria-label="Spillbane">
+          <canvas
+            id="gameCanvas"
+            width="800"
+            height="600"
+            aria-label="Spillbane. Bruk piltaster, WASD eller pilknappene for å styre."
+            role="img"
+          ></canvas>
+          <div class="welcome-screen">
+            <span class="welcome-tag">DEATHTRIP</span>
+            <h2>Klar for en tur?</h2>
+            <p>
+              Unngå trafikken. Samle power-ups.<br />Se hvor langt du kommer.
+            </p>
+            <span class="welcome-hint">Trykk på Start spill</span>
+          </div>
+        </section>
+        <aside class="game-console" aria-label="Kontroller og power-ups">
+          <div class="console-intro">
+            <span class="eyebrow">DIN NESTE UTFORDRING</span>
+            <h2>Hold fokus.<br />Hold deg på veien.</h2>
+          </div>
+          <section class="active-powerups" aria-label="Aktive power-ups">
+            <h3>POWER-UPS</h3>
+            <div id="powerupContainer"></div>
+          </section>
+          <div
+            class="touch-controls"
+            role="group"
+            aria-label="Styr sparkesykkelen"
+          >
+            <button
+              type="button"
+              class="touch-button touch-up"
+              id="touchUp"
+              aria-label="Kjør opp"
+              data-key="ArrowUp"
+            >
+              ↑
+            </button>
+            <button
+              type="button"
+              class="touch-button touch-left"
+              id="touchLeft"
+              aria-label="Kjør til venstre"
+              data-key="ArrowLeft"
+            >
+              ←
+            </button>
+            <span class="dpad-center" aria-hidden="true"></span>
+            <button
+              type="button"
+              class="touch-button touch-right"
+              id="touchRight"
+              aria-label="Kjør til høyre"
+              data-key="ArrowRight"
+            >
+              →
+            </button>
+            <button
+              type="button"
+              class="touch-button touch-down"
+              id="touchDown"
+              aria-label="Kjør ned"
+              data-key="ArrowDown"
+            >
+              ↓
+            </button>
+          </div>
+          <div class="game-controls">
+            <button id="startBtn" class="primary-button">
+              Start spill <span aria-hidden="true">↗</span>
+            </button>
+            <button
+              id="restartBtn"
+              class="primary-button"
+              style="display: none"
+            >
+              Spill igjen <span aria-hidden="true">↻</span>
+            </button>
+            <div class="running-message">
+              <span class="status-dot" aria-hidden="true"></span> God tur!
             </div>
-            <p class="score-display">Poengsum: <span id="score">0</span></p>
-            <p class="score-display">High Score: <span id="highScore">0</span></p>
+            <button id="highscoreBtn" class="highscore-button">
+              <span aria-hidden="true">♜</span> Toppliste
+            </button>
+          </div>
+          <p class="controls-hint">
+            <span class="keyboard-hint"
+              >Styr med <kbd>WASD</kbd> eller piltaster.</span
+            ><span class="touch-hint"
+              >Hold inne pilene for å styre.<br />To fingre gir diagonal
+              styring.</span
+            >
+          </p>
+          <p class="console-footer">
+            Et spill om trafikksikkerhet.<br />Ta de gode valgene i
+            virkeligheten.
+          </p>
+        </aside>
+      </div>
+      <dialog
+        id="helpDialog"
+        class="interface-dialog"
+        aria-labelledby="helpTitle"
+      >
+        <form method="dialog">
+          <button class="dialog-close icon-button" aria-label="Lukk hjelp">
+            ×
+          </button>
+        </form>
+        <span class="eyebrow">KOM I GANG</span>
+        <h2 id="helpTitle">Slik spiller du</h2>
+        <p>
+          Styr sparkesykkelen og unngå biler, syklister og fotgjengere. Du får
+          poeng for hindringene du passerer.
+        </p>
+        <div class="help-controls">
+          <strong>PC / Mac</strong
+          ><span>Piltastene eller WASD. Enter starter en ny tur.</span
+          ><strong>Mobil / nettbrett</strong
+          ><span
+            >Hold pilknappene inne. Du kan gli mellom pilene eller bruke to
+            fingre for å styre diagonalt.</span
+          >
         </div>
-
-        <canvas id="gameCanvas" aria-label="Sparkesykkel Spill" role="img"></canvas>
-
-        <!-- Touch controls for mobile devices -->
-        <div class="touch-controls">
-            <div class="touch-button touch-up" id="touchUp">↑</div>
-            <div class="touch-button touch-down" id="touchDown">↓</div>
-            <div class="touch-button touch-left" id="touchLeft">←</div>
-            <div class="touch-button touch-right" id="touchRight">→</div>
+        <h3>Samle power-ups</h3>
+        <ul class="powerup-guide">
+          <li>
+            <span aria-hidden="true">🛡️</span
+            ><span><strong>Skjold</strong>Beskytter mot en kollisjon.</span>
+          </li>
+          <li>
+            <span aria-hidden="true">⚡</span
+            ><span
+              ><strong>Fart</strong>Gir deg ekstra fart en liten stund.</span
+            >
+          </li>
+          <li>
+            <span aria-hidden="true">⏱️</span
+            ><span
+              ><strong>Slow motion</strong>Sakker ned hindringene
+              midlertidig.</span
+            >
+          </li>
+        </ul>
+        <p class="help-note">
+          Spillet simulerer hvordan alkohol svekker synet og kontrollen. Kjør
+          alltid edru i virkeligheten.
+        </p>
+      </dialog>
+      <dialog
+        id="settingsDialog"
+        class="interface-dialog"
+        aria-labelledby="settingsTitle"
+      >
+        <form method="dialog">
+          <button
+            class="dialog-close icon-button"
+            aria-label="Lukk innstillinger"
+          >
+            ×
+          </button>
+        </form>
+        <span class="eyebrow">GJØR DET TIL DITT</span>
+        <h2 id="settingsTitle">Innstillinger</h2>
+        <label class="setting-row" for="darkModeToggle"
+          ><span
+            ><strong>Mørkt tema</strong
+            ><small>Bytt mellom grønn og mørk bakgrunn.</small></span
+          ><input type="checkbox" id="darkModeToggle" role="switch"
+        /></label>
+        <div class="setting-row">
+          <span
+            ><strong>Lyd</strong
+            ><small>Lyd er fortsatt under utvikling.</small></span
+          ><span class="muted-badge">Av</span>
         </div>
-
-        <div class="active-powerups" role="status" aria-live="polite">
-            <div class="powerup-info">
-                <h3>Aktive Power-ups:</h3>
-                <div id="powerupContainer"></div>
-            </div>
-            <p style="font-style: italic; color: #fff; background-color: #000; font-weight: bold; font-size: 1em; padding: 5px; border-radius: 5px; text-align: center; border: 2px solid #00ff00;">!For å se det klarere, kan du prøve å zoom ut!</p>
+        <div class="setting-row danger-setting">
+          <span
+            ><strong>Nullstill spilldata</strong
+            ><small
+              >Sletter rekorder, lagret navn og innstillinger på denne
+              enheten.</small
+            ></span
+          ><button id="clearDataBtn" class="danger-button">Nullstill</button>
         </div>
-
-        <div class="game-controls">
-            <button id="startBtn" aria-label="Start spill">Start Spill</button>
-            <button id="restartBtn" style="display: none;" aria-label="Spill igjen">Spill Igjen</button>
-            <button id="highscoreBtn" aria-label="Vis highscores">Vis Highscores</button>
-
-            <div class="controls-help">
-                <p>Kontroller: Piltaster, WASD eller berøring</p>
-                <p>
-                    Samle power-ups:
-                    <span class="powerup-icon" aria-hidden="true">🛡️</span> <span>Skjold</span>,
-                    <span class="powerup-icon" aria-hidden="true">⚡</span> <span>Fart</span>,
-                    <span class="powerup-icon" aria-hidden="true">⏱️</span> <span>Slow Motion</span>
-                </p>
-            </div>
-        </div>
-    </div>
-
-    <script src="game.js"></script>
-    <script>
-        // Dark mode functionality
-        const darkModeToggle = document.getElementById('darkModeToggle');
-        const themeLabel = document.getElementById('theme-label');
-        
-        // Check for saved user preference
-        if (localStorage.getItem('darkMode') === 'enabled') {
-            document.body.classList.add('dark-mode');
-            darkModeToggle.checked = true;
-        }
-        
-        darkModeToggle.addEventListener('change', () => {
-            if (darkModeToggle.checked) {
-                document.body.classList.add('dark-mode');
-                localStorage.setItem('darkMode', 'enabled');
-                themeLabel.textContent = 'Light Mode';
-            } else {
-                document.body.classList.remove('dark-mode');
-                localStorage.setItem('darkMode', 'disabled');
-                themeLabel.textContent = 'Dark Mode';
-            }
-        });
-    </script>
-</body>
-
+      </dialog>
+      <p id="interfaceNotice" class="interface-notice" role="status" hidden></p>
+    </main>
+  </body>
 </html>
