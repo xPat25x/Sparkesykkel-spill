@@ -93,10 +93,11 @@ document.addEventListener('DOMContentLoaded', () => {
     function setInterfaceState(state) {
       document.querySelector('.game-container').dataset.state = state;
       document.getElementById('sessionLabel').textContent = {
-        ready: 'Klar for start', playing: 'På veien',
+        ready: 'Klar for start', playing: 'På veien', paused: 'Pause',
         collision: 'Turen er over', finished: 'Klar for en ny tur'
       }[state];
-      // Menus must not hide a live road: they are available between rounds.
+      document.dispatchEvent(new CustomEvent('game:state', { detail: { state } }));
+      // Menus can be opened between rounds or while the road is paused.
       for (const id of ['helpBtn', 'settingsBtn', 'highscoreBtn']) {
         document.getElementById(id).disabled = state === 'playing' || state === 'collision';
       }
@@ -104,9 +105,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // *** SPILLVARIABLER ***
     let gameRunning = false;
+    let gamePaused = false;
+    let runPickups = 0;
+    let runAvoided = 0;
+    let runStartRecord = 0;
+    let frameTransformSaves = 0;
     let gameOver = false;
     let score = 0;
-    let highScore = localStorage.getItem('highScore') ? parseInt(localStorage.getItem('highScore')) : 0;
+    let highScore = Math.max(0, Number.parseInt(localStorage.getItem('highScore'), 10) || 0);
     let animationId;
     let obstacleSpeed = 7; // Økt fra 5 til 7
     let obstacleFrequency = 80; // Redusert fra 100 til 80
@@ -160,160 +166,11 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    // Tegn veien med fortau (sidewalks)
     function drawRoad2D() {
-      // Fjernet himmel, bruker full høyde for veien
-      const horizon = 0; // Satt horisont til 0 (toppen av canvas)
-      
-      const roadWidth = canvas.width * 0.85;
-      const leftEdge = (canvas.width - roadWidth) / 2;
-      const sidewalkWidth = Math.min(40, leftEdge * 0.8);
-
-      // Tegn bakkeområde (gress) - forenklet
-      ctx.fillStyle = '#4CAF50'; // Lysere grønn bakgrunn (var #388E3C)
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      // Apply drunk road distortion
-      if (isDrunk && drunkLevel > 0.2) {
-        // Draw distorted road - wavy effect based on drunk level
-        const distortionFrequency = 0.02;
-        const distortionAmplitude = roadDistortion;
-        const laneWidth = roadWidth / 3;
-        
-        // Adjust drawing
-        ctx.save();
-        
-        // Draw distorted road surface - lysere vei når beruset
-        ctx.fillStyle = '#9E9E9E'; // Enda lysere grå (var #757575)
-        ctx.beginPath();
-        
-        // Left edge with distortion
-        ctx.moveTo(leftEdge, 0);
-        for (let y = 0; y < canvas.height; y += 15) {
-          const distortion = Math.sin(y * distortionFrequency + frameCount * 0.05) * distortionAmplitude;
-          ctx.lineTo(leftEdge + distortion, y);
-        }
-        
-        // Right edge with distortion, offset phase for more realistic wave
-        ctx.lineTo(leftEdge + roadWidth + Math.sin(canvas.height * distortionFrequency + frameCount * 0.05 + 0.5) * distortionAmplitude, canvas.height);
-        for (let y = canvas.height; y > 0; y -= 15) {
-          const distortion = Math.sin(y * distortionFrequency + frameCount * 0.05 + 1) * distortionAmplitude;
-          ctx.lineTo(leftEdge + roadWidth + distortion, y);
-        }
-        
-        ctx.closePath();
-        ctx.fill();
-        
-        // Draw distorted sidewalks
-        ctx.fillStyle = '#BDBDBD';
-        
-        // Left sidewalk
-        ctx.beginPath();
-        ctx.moveTo(leftEdge - sidewalkWidth, 0);
-        for (let y = 0; y < canvas.height; y += 15) {
-          const distortion = Math.sin(y * distortionFrequency + frameCount * 0.05) * distortionAmplitude;
-          ctx.lineTo(leftEdge + distortion, y);
-        }
-        for (let y = canvas.height; y > 0; y -= 15) {
-          const distortion = Math.sin(y * distortionFrequency + frameCount * 0.05) * distortionAmplitude * 0.7;
-          ctx.lineTo(leftEdge - sidewalkWidth + distortion, y);
-        }
-        ctx.closePath();
-        ctx.fill();
-        
-        // Right sidewalk
-        ctx.beginPath();
-        ctx.moveTo(leftEdge + roadWidth + Math.sin(0 * distortionFrequency + frameCount * 0.05 + 1) * distortionAmplitude, 0);
-        for (let y = 0; y < canvas.height; y += 15) {
-          const distortion = Math.sin(y * distortionFrequency + frameCount * 0.05 + 1) * distortionAmplitude;
-          ctx.lineTo(leftEdge + roadWidth + distortion, y);
-        }
-        for (let y = canvas.height; y > 0; y -= 15) {
-          const distortion = Math.sin(y * distortionFrequency + frameCount * 0.05 + 1.2) * distortionAmplitude;
-          ctx.lineTo(leftEdge + roadWidth + sidewalkWidth + distortion, y);
-        }
-        ctx.lineTo(leftEdge + roadWidth + sidewalkWidth + Math.sin(0 * distortionFrequency + frameCount * 0.05 + 1.2) * distortionAmplitude, 0);
-        ctx.closePath();
-        ctx.fill();
-        
-        // Draw wavy road dividing lines
-        ctx.fillStyle = '#FFFFFF';
-        const lineSpacing = 80;
-        const lineWidth = 10;
-        const lineHeight = 40;
-        
-        for (let y = frameCount % lineSpacing; y < canvas.height; y += lineSpacing) {
-          ctx.beginPath();
-          const xCenter = canvas.width / 2;
-          const distortion = Math.sin(y * distortionFrequency + frameCount * 0.05 + 0.5) * distortionAmplitude * 0.7;
-          ctx.fillRect(xCenter - lineWidth / 2 + distortion, y, lineWidth, lineHeight);
-        }
-        
-        // Draw distorted road boundaries
-        ctx.strokeStyle = '#FFC107'; // Mer synlig gul
-        ctx.lineWidth = 4; // Tykkere linjer
-        
-        // Left boundary
-        ctx.beginPath();
-        for (let y = 0; y < canvas.height; y += 15) {
-          const distortion = Math.sin(y * distortionFrequency + frameCount * 0.05) * distortionAmplitude;
-          if (y === 0) {
-            ctx.moveTo(leftEdge + distortion, y);
-          } else {
-            ctx.lineTo(leftEdge + distortion, y);
-          }
-        }
-        ctx.stroke();
-        
-        // Right boundary
-        ctx.beginPath();
-        for (let y = 0; y < canvas.height; y += 15) {
-          const distortion = Math.sin(y * distortionFrequency + frameCount * 0.05 + 1) * distortionAmplitude;
-          if (y === 0) {
-            ctx.moveTo(leftEdge + roadWidth + distortion, y);
-          } else {
-            ctx.lineTo(leftEdge + roadWidth + distortion, y);
-          }
-        }
-        ctx.stroke();
-        
-        ctx.restore();
-      } else {
-        // Normal road rendering (no distortion)
-        // Tegn vei - nå fra topp til bunn
-        ctx.fillStyle = '#9E9E9E'; // Enda lysere grå (var #757575)
-        ctx.fillRect(leftEdge, 0, roadWidth, canvas.height);
-
-        // Tegn fortau - nå fra topp til bunn
-        ctx.fillStyle = '#E0E0E0'; // Lysere fortau (var #BDBDBD)
-        ctx.fillRect(leftEdge - sidewalkWidth, 0, sidewalkWidth, canvas.height);
-        ctx.fillRect(leftEdge + roadWidth, 0, sidewalkWidth, canvas.height);
-
-        // Tegn veilinjer
-        ctx.fillStyle = '#FFFFFF';
-        const lineSpacing = 80;
-        const lineWidth = 10;
-        const lineHeight = 40;
-        
-        // Tegn linjer fra topp til bunn
-        for (let y = frameCount % lineSpacing; y < canvas.height; y += lineSpacing) {
-          ctx.fillRect(canvas.width / 2 - lineWidth / 2, y, lineWidth, lineHeight);
-        }
-
-        // Tegn veigrensene med gule linjer - mer synlige
-        ctx.strokeStyle = '#FFC107'; // Mer synlig gul (var #FFEB3B)
-        ctx.lineWidth = 4; // Tykkere linjer (var 3)
-        
-        ctx.beginPath();
-        ctx.moveTo(leftEdge, 0);
-        ctx.lineTo(leftEdge, canvas.height);
-        ctx.stroke();
-        
-        ctx.beginPath();
-        ctx.moveTo(leftEdge + roadWidth, 0);
-        ctx.lineTo(leftEdge + roadWidth, canvas.height);
-        ctx.stroke();
-      }
+      DeathtripScene.drawRoad(ctx, {
+        width: canvas.width, height: canvas.height, frame: frameCount,
+        drunk: isDrunk ? drunkLevel : 0, distortion: roadDistortion
+      });
     }
 
     // Tegn veien
@@ -683,7 +540,8 @@ document.addEventListener('DOMContentLoaded', () => {
         color: type.color,
         type: type.name,
         isCar: type.isCar,
-        speed: finalSpeed,
+        speed: finalSpeed / (activePowerUps.some(p => p.type === 'slowTime') ? 1.35 : 1),
+        slowTimeApplied: activePowerUps.some(p => p.type === 'slowTime'),
         animationPhase: Math.random() * Math.PI * 2,
         wobbleAmount: wobbleAmount,
         bobAmount: bobAmount,
@@ -1219,10 +1077,40 @@ document.addEventListener('DOMContentLoaded', () => {
       syncDirectionKeys();
     }
 
+    function pauseGame(automatic = false) {
+      if (!gameRunning || gamePaused) return;
+      gamePaused = true;
+      releaseControls();
+      cancelAnimationFrame(animationId);
+      simulationClock.reset();
+      setInterfaceState('paused');
+      document.getElementById('pauseCaption').textContent = automatic
+        ? 'Spillet er satt på pause mens du er borte.' : 'Fortsett når du er klar.';
+      if (!document.hidden) document.getElementById('resumeBtn').focus({ preventScroll: true });
+    }
+
+    function resumeGame() {
+      if (!gameRunning || !gamePaused || document.querySelector('dialog[open], .highscore-modal')) return;
+      gamePaused = false;
+      releaseControls();
+      simulationClock.reset();
+      setInterfaceState('playing');
+      document.getElementById('pauseBtn').focus({ preventScroll: true });
+      animationId = requestAnimationFrame(gameLoop);
+    }
+    document.getElementById('pauseBtn').addEventListener('click', () => gamePaused ? resumeGame() : pauseGame());
+    document.getElementById('resumeBtn').addEventListener('click', resumeGame);
+
     window.addEventListener('keydown', (event) => {
       // Typing a name / using a dialog must never move or restart the game.
       if (event.target.closest('input, textarea, select, dialog, [role="dialog"], [contenteditable="true"]')) return;
       if (event.target.closest('button') && ['Enter', ' '].includes(event.key)) return;
+      if (['p', 'P', ' ', 'Escape'].includes(event.key) && gameRunning && !event.repeat) {
+        event.preventDefault();
+        if (gamePaused) resumeGame(); else pauseGame();
+        return;
+      }
+      if (gamePaused) return;
       if (event.key === 'Enter' && !event.repeat) {
         if (!gameRunning && !gameOver) startGame();
         else if (gameOver && document.querySelector('.game-container').dataset.state === 'finished') startGame();
@@ -1241,10 +1129,10 @@ document.addEventListener('DOMContentLoaded', () => {
       keyboardKeys.delete(key);
       syncDirectionKeys();
     });
-    window.addEventListener('blur', releaseControls);
-    window.addEventListener('pagehide', releaseControls);
+    window.addEventListener('blur', () => { releaseControls(); pauseGame(true); });
+    window.addEventListener('pagehide', () => { releaseControls(); pauseGame(true); });
     document.addEventListener('visibilitychange', () => {
-      if (document.hidden) releaseControls();
+      if (document.hidden) { releaseControls(); pauseGame(true); }
     });
 
     // Utility function to draw hitboxes for debugging
@@ -1271,7 +1159,7 @@ document.addEventListener('DOMContentLoaded', () => {
       messageElem.style.textShadow = '2px 2px 4px rgba(0,0,0,0.7)';
       messageElem.style.zIndex = '100';
       
-      document.body.appendChild(messageElem);
+      document.querySelector('.game-stage').appendChild(messageElem);
       
       // Fade out and remove
       setTimeout(() => {
@@ -1317,20 +1205,20 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.scale(pulseZoom, pulseZoom);
         ctx.translate(-canvas.width / 2, -canvas.height / 2);
         
-        // Draw the road and objects
-        drawRoad();
+        // Keep the pulse as a visual transform; never skip a simulation tick.
+        frameTransformSaves++;
         
         // Semi-transparent overlay - fjernet
         // ctx.fillStyle = `rgba(255, 150, 50, ${0.1 * drunkLevel})`;
         // ctx.fillRect(0, 0, canvas.width, canvas.height);
         
-        ctx.restore();
-        return true; // Skip normal rendering
+        return false;
       }
       
       // Apply zoom and translation for drunk effect
       if (drunkLevel > 0.2) {
         ctx.save();
+        frameTransformSaves++;
         ctx.translate(canvas.width / 2, canvas.height / 2);
         ctx.scale(zoomFactor, zoomFactor);
         ctx.translate(-canvas.width / 2 + Math.sin(frameCount * 0.01) * 5 * drunkLevel, 
@@ -1358,21 +1246,35 @@ document.addEventListener('DOMContentLoaded', () => {
     // *** HOVED-SPILLØKKE ***
     // Hovedfunksjonen som kjører spillet, oppdaterer alle objekter,
     // tegner alle elementer og håndterer kollisjoner
-    let lastTimestamp = 0;
-    const targetFPS = 60;
-    const timeStep = 1000 / targetFPS;
+    const simulationClock = new DeathtripClock(() => {
+      if (!gameRunning || gamePaused) return false;
+      try { updateGameFrame(); }
+      finally {
+        while (frameTransformSaves > 0) {
+          ctx.restore();
+          frameTransformSaves--;
+        }
+      }
+      return gameRunning && !gamePaused;
+    });
 
     function gameLoop(timestamp) {
-      if (!gameRunning) return;
-      
-      // Beregn tidsdifferanse for jevn bevegelse uavhengig av skjerm
-      if (!lastTimestamp) lastTimestamp = timestamp;
-      const deltaTime = timestamp - lastTimestamp;
-      lastTimestamp = timestamp;
-      
-      // Juster bevegelseshastighet basert på faktisk oppdateringsrate
-      const speedFactor = Math.min(deltaTime / timeStep, 2.0);
-      
+      if (!gameRunning || gamePaused) return;
+      simulationClock.advance(timestamp);
+      if (gameRunning && !gamePaused) animationId = requestAnimationFrame(gameLoop);
+    }
+
+    function publishRunProgress() {
+      document.dispatchEvent(new CustomEvent('game:progress', { detail: {
+        score, seconds: Math.floor(frameCount / 60), influence: Math.round(drunkLevel * 100),
+        pickups: runPickups, avoided: runAvoided, record: runStartRecord
+      } }));
+    }
+
+    function updateGameFrame() {
+      const speedFactor = 1;
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
       // Make sure we always start with a clean state
       if (frameCount === 0) {
         ctx.globalAlpha = 1.0;
@@ -1431,7 +1333,7 @@ document.addEventListener('DOMContentLoaded', () => {
             flashOverlay.style.zIndex = '1000';
             flashOverlay.style.transition = 'opacity 0.5s';
             
-            document.body.appendChild(flashOverlay);
+            document.querySelector('.game-stage').appendChild(flashOverlay);
             
             setTimeout(() => {
               flashOverlay.style.opacity = '0';
@@ -1450,24 +1352,8 @@ document.addEventListener('DOMContentLoaded', () => {
       // Apply drunk vision effects - simplified for better performance
       if (isDrunk && drunkLevel > 0.1) {
         // Apply screen zoom and distortion effects
-        const skipNormalRendering = applyDrunkScreenEffects();
-        if (skipNormalRendering) {
-          // If we already rendered, just apply the rest of the game logic
-          // but skip re-rendering the background
-          player.update(keys, speedFactor);
-          player.draw();
-          
-          // Make sure we restore the canvas state before continuing
-          ctx.globalAlpha = 1.0;
-          ctx.globalCompositeOperation = 'source-over';
-          ctx.filter = 'none';
-          ctx.resetTransform ? ctx.resetTransform() : ctx.setTransform(1, 0, 0, 1, 0, 0);
-          
-          // Update score
-          animationId = requestAnimationFrame(gameLoop);
-          return;
-        }
-        
+        applyDrunkScreenEffects();
+
         // Grønn flash-effekt hver 7 sekunder (420 frames ved 60 fps)
         // Flash varer i 2 sekunder (120 frames)
         const flashDuration = 120; // 2 sekunder ved 60 fps
@@ -1518,6 +1404,7 @@ document.addEventListener('DOMContentLoaded', () => {
           const doubleVisionOffset = Math.sin(Math.floor(frameCount * 0.02)) * drunkLevel * 1.2; // Økt fra 1.0 til 1.2
           ctx.save();
           // Balansert alpha for dobbeltvisjon - synlig men ikke for forstyrrende
+          frameTransformSaves++;
           ctx.globalAlpha = 0.10 * drunkLevel; // Økt fra 0.08 til 0.10
           ctx.translate(doubleVisionOffset, 0);
         }
@@ -1684,6 +1571,7 @@ document.addEventListener('DOMContentLoaded', () => {
           // Add to score when obstacle is successfully avoided
           if (!obstacle.crashed) {
             score += 1;
+            runAvoided++;
           scoreDisplay.textContent = score;
           
           // Vis melding ved poengmilepæler
@@ -1793,79 +1681,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
       
-      // Reset drunk vision effects
-      if (isDrunk && drunkLevel > 0.1) {
-        ctx.restore();
-        ctx.filter = 'none';
-      
-        // Draw drunk indicator with different messages based on level
-        ctx.save();
-        ctx.fillStyle = 'rgba(255, 100, 50, 0.7)';
-        ctx.font = 'bold 16px Arial';
-        ctx.textAlign = 'left';
-        
-        // Different messages based on drunk level
-        let drunkMessage = '';
-        if (drunkLevel >= 1.0) {
-          drunkMessage = '🍺🍺🍺 DRITINGS!';
-        } else if (drunkLevel >= 0.7) {
-          drunkMessage = '🍺🍺 PÅ EN SNURR!';
-        } else if (drunkLevel >= 0.4) {
-          drunkMessage = '🍺🍺 BRISEN!';
-        } else if (drunkLevel >= 0.1) {
-          drunkMessage = '🍺 LETTERE PÅVIRKET';
-        }
-        
-        // Only show message if there is one
-        if (drunkMessage) {
-          // Flyttet drunkMessage og meterbar mye høyere opp på skjermen
-          // for å unngå overlapp med annen tekst
-          ctx.fillText(drunkMessage, 10, 30); // Changed from canvas.height - 50 to 30
-          
-          // Draw drunk meter
-          const meterWidth = 150;
-          const meterHeight = 15;
-          const meterX = 10;
-          const meterY = 40; // Changed from canvas.height - 40 to 40
-          
-          // Bakgrunn for meter
-          ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-          ctx.fillRect(meterX, meterY, meterWidth, meterHeight);
-          
-          // Tegnekant rundt meter
-          ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
-          ctx.lineWidth = 1;
-          ctx.strokeRect(meterX, meterY, meterWidth, meterHeight);
-          
-          // Meter color varies with drunk level
-          let meterColor;
-          if (drunkLevel >= 0.9) {
-            meterColor = 'rgba(255, 0, 0, 0.8)'; // Red for very drunk
-          } else if (drunkLevel >= 0.5) {
-            meterColor = 'rgba(255, 100, 0, 0.8)'; // Orange for moderately drunk
-          } else {
-            meterColor = 'rgba(255, 200, 0, 0.8)'; // Yellow for lightly drunk
-          }
-          
-          ctx.fillStyle = meterColor;
-          ctx.fillRect(meterX, meterY, meterWidth * drunkLevel, meterHeight);
-          
-          // Vis også beruselsesnivå i prosent
-          ctx.fillStyle = 'white';
-          ctx.font = 'bold 12px Arial';
-          ctx.fillText(`${Math.floor(drunkLevel * 100)}%`, meterX + meterWidth + 10, meterY + 12);
-        }
-        
-        ctx.restore();
-      }
-      
-      animationId = requestAnimationFrame(gameLoop);
+      if (frameCount % 6 === 0) publishRunProgress();
     }
 
     function runCollisionAnimation(effectFunction, collidedObstacle) {
       gameRunning = false;
       gameOver = true;
       setInterfaceState('collision');
+      document.dispatchEvent(new CustomEvent('game:crash'));
       releaseControls();
       cancelAnimationFrame(animationId);
       let crashProgress = 0;
@@ -2449,6 +2272,7 @@ document.addEventListener('DOMContentLoaded', () => {
       
       // Reset controls before a new round.
       releaseControls();
+      gamePaused = false;
       setInterfaceState('playing');
       
       // Cancel any ongoing animations
@@ -2492,6 +2316,9 @@ document.addEventListener('DOMContentLoaded', () => {
       gameRunning = true;
       gameOver = false;
       score = 0;
+      runPickups = 0;
+      runAvoided = 0;
+      runStartRecord = highScore;
       obstacles = [];
       collectibles = [];
       activePowerUps = [];
@@ -2502,6 +2329,8 @@ document.addEventListener('DOMContentLoaded', () => {
       player.x = canvas.width / 2;
       player.y = canvas.height - 100;
       player.tilt = 0;
+      player.targetTilt = 0;
+      player.speed = 11;
       player.speedX = 0;
       player.speedY = 0;
       
@@ -2512,6 +2341,8 @@ document.addEventListener('DOMContentLoaded', () => {
       lastRandomDirection = 0;
       randomDirectionTimer = 0;
       lastScoreThreshold = 0; // Reset score threshold tracker
+      isGreenFlashing = false;
+      lastGreenFlashTime = 0;
       
       // Empty wheel tracks array for performance
       wheelTracks = [];
@@ -2529,7 +2360,10 @@ document.addEventListener('DOMContentLoaded', () => {
       initRoadLines();
       initEnvironment();
       // Start with a real animation timestamp; never send NaN into movement.
-      lastTimestamp = 0;
+      simulationClock.reset();
+      updatePowerUpDisplay();
+      publishRunProgress();
+      document.dispatchEvent(new CustomEvent('game:start'));
       animationId = requestAnimationFrame(gameLoop);
     }
     
@@ -2602,7 +2436,9 @@ document.addEventListener('DOMContentLoaded', () => {
     function endGame() {
       gameRunning = false;
       gameOver = true;
+      gamePaused = false;
       setInterfaceState('finished');
+      publishRunProgress();
       releaseControls();
       
       // Stop engine sound
@@ -2638,7 +2474,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
       
       const heading = document.createElement('h2');
-      heading.textContent = 'GAME OVER!';
+      heading.textContent = 'Turen er over';
       
       const scoreInfo = document.createElement('p');
       scoreInfo.textContent = `Poengsum: ${score}`;
@@ -2651,6 +2487,23 @@ document.addEventListener('DOMContentLoaded', () => {
       gameOverDiv.appendChild(heading);
       gameOverDiv.appendChild(scoreInfo);
       gameOverDiv.appendChild(highScoreInfo);
+      if (isNewHighScore) {
+        const badge = document.createElement('p');
+        badge.className = 'record-badge';
+        badge.textContent = 'Ny personlig rekord!';
+        gameOverDiv.appendChild(badge);
+      }
+      const summary = document.createElement('dl');
+      summary.className = 'run-summary';
+      const minutes = Math.floor(frameCount / 3600);
+      const seconds = String(Math.floor(frameCount / 60) % 60).padStart(2, '0');
+      for (const [label, value] of [['Tid på veien', `${minutes}:${seconds}`], ['Power-ups', runPickups]]) {
+        const stat = document.createElement('div');
+        const term = document.createElement('dt'); term.textContent = label;
+        const detail = document.createElement('dd'); detail.textContent = value;
+        stat.append(term, detail); summary.appendChild(stat);
+      }
+      gameOverDiv.appendChild(summary);
       
       // Legg til navneinput hvis ny topp 10-score
       if (isNewTopTen) {
@@ -2838,6 +2691,11 @@ document.addEventListener('DOMContentLoaded', () => {
         gameOverDiv.appendChild(highscoreWrapper);
       }
       
+      const again = document.createElement('button');
+      again.className = 'primary-button result-restart';
+      again.textContent = 'Spill igjen ↗';
+      again.addEventListener('click', startGame);
+      gameOverDiv.appendChild(again);
       const container = document.querySelector('.game-container');
       container.appendChild(gameOverDiv);
       
@@ -2963,7 +2821,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const percentage = Math.floor((powerUp.timeLeft / powerUp.duration) * 100);
         const timeLeft = Math.floor(powerUp.timeLeft / 60 * 100) / 100;
         powerupElement.innerHTML = `
-          <span class="powerup-icon" style="background-color:${powerUp.color}30;">${powerUp.icon}</span>
+          <span class="powerup-icon" style="background-color:${powerUp.color}30;">${DeathtripScene.icon(powerUp.type)}</span>
           <div class="powerup-info">
             <span>${getPowerUpName(powerUp.type)}</span>
             <div class="powerup-bar">
@@ -2977,6 +2835,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function collectPowerUp(collectible) {
+      runPickups++;
+      document.dispatchEvent(new CustomEvent('game:pickup', { detail: {
+        type: collectible.type, label: getPowerUpName(collectible.type), color: collectible.color
+      } }));
+      const existingPowerUp = activePowerUps.find(p => p.type === collectible.type);
+      if (existingPowerUp) {
+        existingPowerUp.timeLeft = collectible.duration;
+        existingPowerUp.duration = collectible.duration;
+        updatePowerUpDisplay();
+        return;
+      }
       const powerUp = {
         type: collectible.type,
         timeLeft: collectible.duration,
@@ -3000,7 +2869,10 @@ document.addEventListener('DOMContentLoaded', () => {
         player.speed *= 1.8;
       } else if (collectible.type === 'slowTime') {
         for (const obstacle of obstacles) {
-          obstacle.speed /= 1.35;
+          if (!obstacle.slowTimeApplied) {
+            obstacle.speed /= 1.35;
+            obstacle.slowTimeApplied = true;
+          }
         }
       } else if (collectible.type === 'points') {
         score += 10;
@@ -3042,7 +2914,10 @@ document.addEventListener('DOMContentLoaded', () => {
             player.speed /= 1.8;
           } else if (activePowerUps[i].type === 'slowTime') {
             for (const obstacle of obstacles) {
-              obstacle.speed *= 1.35;
+              if (obstacle.slowTimeApplied) {
+                obstacle.speed *= 1.35;
+                obstacle.slowTimeApplied = false;
+              }
             }
           }
           activePowerUps.splice(i, 1);
@@ -3113,24 +2988,10 @@ document.addEventListener('DOMContentLoaded', () => {
         duration: type.duration,
         speed: obstacleSpeed * 0.7 * snowFactor,
         animationPhase: 0,
+        rotation: 0,
+        baseGlowSize: size,
         draw() {
-          ctx.save();
-          const floatOffset = Math.sin(this.animationPhase) * 3;
-          ctx.translate(this.x, this.y + floatOffset);
-          ctx.shadowColor = this.color;
-          ctx.shadowBlur = 15;
-          ctx.fillStyle = this.color;
-          ctx.globalAlpha = 0.7;
-          ctx.beginPath();
-          ctx.arc(0, 0, this.width / 2, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.globalAlpha = 1;
-          ctx.fillStyle = '#FFF';
-          ctx.font = '16px Arial';
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillText(this.icon, 0, 0);
-          ctx.restore();
+          DeathtripScene.drawPickup(ctx, this);
           this.animationPhase += 0.1;
         },
         update(speedFactor = 1) {
@@ -3586,6 +3447,7 @@ document.addEventListener('DOMContentLoaded', () => {
           localStorage.removeItem('highscores');
           localStorage.removeItem('highScore');
           localStorage.removeItem('darkMode');
+          localStorage.removeItem('soundEnabled');
           localStorage.removeItem('playerName');
           playerName = 'Anonym';
           document.body.classList.remove('dark-mode');
@@ -3614,7 +3476,13 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Funksjon for å hente highscores
     function getHighscores() {
-      return JSON.parse(localStorage.getItem('highscores') || '[]');
+      try {
+        const entries = JSON.parse(localStorage.getItem('highscores') || '[]');
+        if (!Array.isArray(entries)) return [];
+        return entries.filter(entry => entry && typeof entry.name === 'string' &&
+          Number.isFinite(entry.score) && entry.score >= 0)
+          .sort((a, b) => b.score - a.score).slice(0, 10);
+      } catch { return []; }
     }
     
     // Funksjon for å lagre highscores
@@ -3892,7 +3760,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function setupTouchControls() {
       for (const button of directionButtons) {
         button.addEventListener('pointerdown', (event) => {
-          if (event.button !== 0 || gameOver) return;
+          if (event.button !== 0 || gameOver || gamePaused) return;
           event.preventDefault();
           if (!gameRunning) startGame();
           controlPointers.set(event.pointerId, button);
@@ -3905,7 +3773,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         // Keyboard / assistive technology: a focused arrow acts like an arrow key.
         button.addEventListener('keydown', (event) => {
-          if (![' ', 'Enter'].includes(event.key) || gameOver) return;
+          if (![' ', 'Enter'].includes(event.key) || gameOver || gamePaused) return;
           event.preventDefault();
           if (!gameRunning) startGame();
           keyboardKeys.add(button.dataset.key);

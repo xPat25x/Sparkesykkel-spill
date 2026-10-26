@@ -14,7 +14,10 @@
     <title>Sparkesykkel | Deathtrip</title>
     <link rel="icon" href="deathtrip.png" type="image/png" />
     <link rel="stylesheet" href="styles.css" />
+    <script src="loop.js" defer></script>
+    <script src="scene.js" defer></script>
     <script src="game.js" defer></script>
+    <script src="experience.js" defer></script>
     <script src="interface.js" defer></script>
   </head>
   <body>
@@ -107,6 +110,42 @@
             aria-label="Spillbane. Bruk piltaster, WASD eller pilknappene for å styre."
             role="img"
           ></canvas>
+          <div class="drive-hud" aria-label="Denne turen">
+            <div class="run-time">
+              <span>TID PÅ VEIEN</span><strong id="runTime">0:00</strong>
+            </div>
+            <div class="influence-status">
+              <div>
+                <span>PÅVIRKNING</span><strong id="influenceValue">0%</strong>
+              </div>
+              <div
+                id="influenceMeter"
+                class="influence-meter"
+                role="progressbar"
+                aria-label="Påvirkning i simuleringen"
+                aria-valuemin="0"
+                aria-valuemax="100"
+                aria-valuenow="0"
+              >
+                <span></span>
+              </div>
+            </div>
+          </div>
+          <div
+            id="pickupMessage"
+            class="pickup-message"
+            role="status"
+            hidden
+          ></div>
+          <div class="pause-screen" role="region" aria-labelledby="pauseTitle">
+            <span class="welcome-tag">EN LITEN PAUSE</span>
+            <h2 id="pauseTitle">Ta en pust.</h2>
+            <p id="pauseCaption">Fortsett når du er klar.</p>
+            <button id="resumeBtn" class="primary-button">
+              Fortsett turen <span aria-hidden="true">↗</span>
+            </button>
+            <small>Du kan også bruke P eller mellomrom.</small>
+          </div>
           <div class="welcome-screen">
             <span class="welcome-tag">DEATHTRIP</span>
             <h2>Klar for en tur?</h2>
@@ -179,6 +218,14 @@
             >
               Spill igjen <span aria-hidden="true">↻</span>
             </button>
+            <button
+              id="pauseBtn"
+              class="pause-button"
+              aria-label="Sett spillet på pause"
+              aria-pressed="false"
+            >
+              <span aria-hidden="true">Ⅱ</span> Pause
+            </button>
             <div class="running-message">
               <span class="status-dot" aria-hidden="true"></span> God tur!
             </div>
@@ -225,11 +272,18 @@
             fingre for å styre diagonalt.</span
           >
         </div>
+        <p>
+          Trykk Pause, P, mellomrom eller Escape for å ta en pause. Spillet
+          pauses automatisk når du bytter vindu.
+        </p>
         <h3>Samle power-ups</h3>
         <ul class="powerup-guide">
           <li>
             <span aria-hidden="true">🛡️</span
-            ><span><strong>Skjold</strong>Beskytter mot en kollisjon.</span>
+            ><span
+              ><strong>Skjold</strong>Beskytter deg mens skjoldet er
+              aktivt.</span
+            >
           </li>
           <li>
             <span aria-hidden="true">⚡</span
@@ -274,8 +328,15 @@
         <div class="setting-row">
           <span
             ><strong>Lyd</strong
-            ><small>Lyd er fortsatt under utvikling.</small></span
-          ><span class="muted-badge">Av</span>
+            ><small>Korte lyder for poeng, power-ups og krasj.</small></span
+          ><button
+            id="soundToggle"
+            class="sound-option"
+            aria-pressed="false"
+            aria-label="Slå på lydeffekter"
+          >
+            Av
+          </button>
         </div>
         <div class="setting-row danger-setting">
           <span
