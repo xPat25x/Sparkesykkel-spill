@@ -65,11 +65,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
       
-      // For mobile enheter (selv om dette er et PC-spill, kan det være nyttig)
-      if (platform.isMobile) {
-        canvas.height = 350; // Mindre canvas for mobil
-      }
-      
       console.log('Spillet er optimalisert for: ' + 
                   (platform.isWindows ? 'Windows' : 
                    platform.isMac ? 'Mac' : 
@@ -86,14 +81,26 @@ document.addEventListener('DOMContentLoaded', () => {
     const restartBtn = document.getElementById('restartBtn');
     const scoreDisplay = document.getElementById('score');
     const highScoreDisplay = document.getElementById('highScore');
-    const soundToggle = document.getElementById('soundToggle');
 
     // Optimaliser for plattform etter at canvas er definert
     optimizeForPlatform(userPlatform, canvas);
 
-    // Sett lerretstørrelse basert på elementets offset
-    canvas.width = canvas.offsetWidth;
-    canvas.height = canvas.offsetHeight;
+    // Keep the original 800 × 600 desktop playfield on every screen.
+    // interface.js scales only its display size, including during rotation.
+    canvas.width = 800;
+    canvas.height = 600;
+
+    function setInterfaceState(state) {
+      document.querySelector('.game-container').dataset.state = state;
+      document.getElementById('sessionLabel').textContent = {
+        ready: 'Klar for start', playing: 'På veien',
+        collision: 'Turen er over', finished: 'Klar for en ny tur'
+      }[state];
+      // Menus must not hide a live road: they are available between rounds.
+      for (const id of ['helpBtn', 'settingsBtn', 'highscoreBtn']) {
+        document.getElementById(id).disabled = state === 'playing' || state === 'collision';
+      }
+    }
 
     // *** SPILLVARIABLER ***
     let gameRunning = false;
@@ -123,7 +130,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let motionBlurEnabled = false;
     let cameraShakeEnabled = true;
     let dynamicCameraEnabled = false;
-    let usePlayerImage = true;
+    let usePlayerImage = false;
     
     // *** ARRAY-INITIALISERINGER ***
     let obstacles = [];         // Hindringer (biler, fotgjengere)
@@ -314,18 +321,8 @@ document.addEventListener('DOMContentLoaded', () => {
         drawRoad2D();
     }
 
-    // Last spillerbilde (scooter) med fallback
+    // This repository uses the drawn rider below, not a missing scooter.png.
     const playerImage = new Image();
-    playerImage.src = 'scooter.png';
-    usePlayerImage = false; // Changed from 'let usePlayerImage = false' to avoid redeclaration
-    playerImage.onload = () => {
-      usePlayerImage = true;
-      console.log('Spillerbilde lastet.');
-    };
-    playerImage.onerror = () => {
-      usePlayerImage = false;
-      console.warn('Kunne ikke laste spillerbilde – bruker fallback-tegning.');
-    };
 
     // Tegn scooter ved opprinnelig posisjon (fallback)
     function drawScooterAtOrigin(width, height) {
@@ -1199,90 +1196,55 @@ document.addEventListener('DOMContentLoaded', () => {
       s: false
     };
     
-    // Keysressed fjernet helt, siden vi bruker keys-objektet direkte
+    // Keep independent sources so two fingers and a keyboard can coexist.
+    const keyboardKeys = new Set();
+    const controlPointers = new Map();
+    const directionButtons = [...document.querySelectorAll('.touch-button')];
+    const keyAliases = { Left: 'ArrowLeft', Right: 'ArrowRight', Up: 'ArrowUp', Down: 'ArrowDown' };
 
-    window.addEventListener('keydown', (e) => {
-      if (!gameRunning && !gameOver && e.key === 'Enter') {
-        startGame();
+    function syncDirectionKeys() {
+      for (const key in keys) keys[key] = keyboardKeys.has(key);
+      for (const button of controlPointers.values()) {
+        if (button) keys[button.dataset.key] = true;
+      }
+      for (const button of directionButtons) {
+        const held = [...controlPointers.values()].includes(button);
+        button.classList.toggle('is-held', held);
+      }
+    }
+
+    function releaseControls() {
+      keyboardKeys.clear();
+      controlPointers.clear();
+      syncDirectionKeys();
+    }
+
+    window.addEventListener('keydown', (event) => {
+      // Typing a name / using a dialog must never move or restart the game.
+      if (event.target.closest('input, textarea, select, dialog, [role="dialog"], [contenteditable="true"]')) return;
+      if (event.target.closest('button') && ['Enter', ' '].includes(event.key)) return;
+      if (event.key === 'Enter' && !event.repeat) {
+        if (!gameRunning && !gameOver) startGame();
+        else if (gameOver && document.querySelector('.game-container').dataset.state === 'finished') startGame();
         return;
       }
-      
-      if (gameOver && e.key === 'Enter') {
-        restartGame();
-        return;
-      }
-      
-      const key = e.key;
-      
-      // Oppdater keys-objektet direkte
-      if (key === 'ArrowLeft' || key === 'Left') {
-        keys.ArrowLeft = true;
-        e.preventDefault();
-      }
-      if (key === 'ArrowRight' || key === 'Right') {
-        keys.ArrowRight = true;
-        e.preventDefault();
-      }
-      if (key === 'ArrowUp' || key === 'Up') {
-        keys.ArrowUp = true;
-        e.preventDefault();
-      }
-      if (key === 'ArrowDown' || key === 'Down') {
-        keys.ArrowDown = true;
-        e.preventDefault();
-      }
-      
-      // WASD taster
-      if (key === 'a' || key === 'A') {
-        keys.a = true;
-      }
-      if (key === 'd' || key === 'D') {
-        keys.d = true;
-      }
-      if (key === 'w' || key === 'W') {
-        keys.w = true;
-      }
-      if (key === 's' || key === 'S') {
-        keys.s = true;
-      }
-      
-      // Støtte for spacebar (pause)
-      if (key === ' ' && gameRunning) {
-        togglePause();
-        e.preventDefault();
+      const key = keyAliases[event.key] || (event.key.length === 1 ? event.key.toLowerCase() : event.key);
+      if (Object.hasOwn(keys, key)) {
+        event.preventDefault();
+        keyboardKeys.add(key);
+        syncDirectionKeys();
       }
     });
 
-    window.addEventListener('keyup', (e) => {
-      const key = e.key;
-      
-      // Oppdater keys-objektet direkte
-      if (key === 'ArrowLeft' || key === 'Left') {
-        keys.ArrowLeft = false;
-      }
-      if (key === 'ArrowRight' || key === 'Right') {
-        keys.ArrowRight = false;
-      }
-      if (key === 'ArrowUp' || key === 'Up') {
-        keys.ArrowUp = false;
-      }
-      if (key === 'ArrowDown' || key === 'Down') {
-        keys.ArrowDown = false;
-      }
-      
-      // WASD taster
-      if (key === 'a' || key === 'A') {
-        keys.a = false;
-      }
-      if (key === 'd' || key === 'D') {
-        keys.d = false;
-      }
-      if (key === 'w' || key === 'W') {
-        keys.w = false;
-      }
-      if (key === 's' || key === 'S') {
-        keys.s = false;
-      }
+    window.addEventListener('keyup', (event) => {
+      const key = keyAliases[event.key] || (event.key.length === 1 ? event.key.toLowerCase() : event.key);
+      keyboardKeys.delete(key);
+      syncDirectionKeys();
+    });
+    window.addEventListener('blur', releaseControls);
+    window.addEventListener('pagehide', releaseControls);
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) releaseControls();
     });
 
     // Utility function to draw hitboxes for debugging
@@ -1903,6 +1865,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function runCollisionAnimation(effectFunction, collidedObstacle) {
       gameRunning = false;
       gameOver = true;
+      setInterfaceState('collision');
+      releaseControls();
       cancelAnimationFrame(animationId);
       let crashProgress = 0;
       collidedObstacle.inCollision = true;
@@ -2483,10 +2447,9 @@ document.addEventListener('DOMContentLoaded', () => {
     function startGame() {
       if (gameRunning) return;
       
-      // Reset all key states to prevent stuck movement from pre-game key presses
-      for (const key in keys) {
-        keys[key] = false;
-      }
+      // Reset controls before a new round.
+      releaseControls();
+      setInterfaceState('playing');
       
       // Cancel any ongoing animations
       cancelAnimationFrame(animationId);
@@ -2565,7 +2528,9 @@ document.addEventListener('DOMContentLoaded', () => {
       restartBtn.style.display = 'none';
       initRoadLines();
       initEnvironment();
-      gameLoop();
+      // Start with a real animation timestamp; never send NaN into movement.
+      lastTimestamp = 0;
+      animationId = requestAnimationFrame(gameLoop);
     }
     
     // Drunk wheel tracks
@@ -2637,6 +2602,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function endGame() {
       gameRunning = false;
       gameOver = true;
+      setInterfaceState('finished');
+      releaseControls();
       
       // Stop engine sound
       playSoundEffect('stopEngine');
@@ -2657,10 +2624,14 @@ document.addEventListener('DOMContentLoaded', () => {
       
       const gameOverDiv = document.createElement('div');
       gameOverDiv.className = 'game-over';
+      gameOverDiv.setAttribute('role', 'dialog');
+      gameOverDiv.setAttribute('aria-modal', 'true');
+      gameOverDiv.setAttribute('aria-label', 'Turen er over');
       
       // Legg til lukke-knapp
       const closeBtn = document.createElement('button');
       closeBtn.className = 'close-gameover-btn';
+      closeBtn.setAttribute('aria-label', 'Lukk resultatet');
       closeBtn.textContent = '×';
       closeBtn.addEventListener('click', () => {
         gameOverDiv.remove();
@@ -2790,18 +2761,6 @@ document.addEventListener('DOMContentLoaded', () => {
         
         gameOverDiv.appendChild(nameForm);
         
-        // Sett fokus på input-feltet med en liten forsinkelse for å sikre at DOM-en er oppdatert
-        setTimeout(() => {
-          const inputField = document.getElementById('playerName');
-          if (inputField) {
-            inputField.focus();
-            // Place cursor at the end of the text
-            if (inputField.value) {
-              inputField.selectionStart = inputField.selectionEnd = inputField.value.length;
-            }
-          }
-        }, 100);
-        
         // Lagre highscore når brukeren sender inn
         submitBtn.addEventListener('click', () => {
           // Get the entered name
@@ -2901,10 +2860,14 @@ document.addEventListener('DOMContentLoaded', () => {
       // Lag en modal for highscore-listen
       const modal = document.createElement('div');
       modal.className = 'highscore-modal';
+      modal.setAttribute('role', 'dialog');
+      modal.setAttribute('aria-modal', 'true');
+      modal.setAttribute('aria-label', 'Toppliste');
       
       // Lag en lukke-knapp
       const closeBtn = document.createElement('button');
       closeBtn.className = 'close-highscore-btn';
+      closeBtn.setAttribute('aria-label', 'Lukk topplisten');
       closeBtn.textContent = '×';
       closeBtn.addEventListener('click', () => modal.remove());
       
@@ -2918,87 +2881,9 @@ document.addEventListener('DOMContentLoaded', () => {
       container.appendChild(modal);
     });
 
-    window.addEventListener('resize', () => {
-      canvas.width = canvas.offsetWidth;
-      canvas.height = canvas.offsetHeight;
-      initRoadLines();
-      if (gameOver) {
-        clearCanvas();
-        drawRoad();
-      }
-    });
-
     initRoadLines();
     clearCanvas();
     drawRoad();
-    
-    // Gjør velkomst-teksten mer synlig
-    const welcomeText = 'Trykk på "Start Spill" for å begynne';
-    
-    // Lagre canvas-tilstanden
-    ctx.save();
-    
-    // Sett font først
-    ctx.font = 'bold 24px Arial';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    
-    // Beregn tekstbredden etter at fonten er satt
-    const textWidth = ctx.measureText(welcomeText).width + 40;
-    
-    // Tegn en halv-gjennomsiktig bakgrunn for teksten
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-    ctx.fillRect(canvas.width/2 - textWidth/2, canvas.height/2 - 40, textWidth, 80);
-    
-    // Tegn en grønn border
-    ctx.strokeStyle = '#4CAF50';
-    ctx.lineWidth = 3;
-    ctx.strokeRect(canvas.width/2 - textWidth/2, canvas.height/2 - 40, textWidth, 80);
-    
-    // Tegn teksten med skygge
-    ctx.shadowColor = "rgba(0, 0, 0, 0.7)";
-    ctx.shadowBlur = 5;
-    ctx.shadowOffsetX = 2;
-    ctx.shadowOffsetY = 2;
-    
-    ctx.fillStyle = '#FFFFFF';
-    ctx.fillText(welcomeText, canvas.width / 2, canvas.height / 2);
-    
-    // Legg til en pulserende effekt
-    function pulseWelcomeText() {
-      if (!gameRunning && !gameOver) {
-        // Varier størrelsen litt
-        const size = 24 + Math.sin(Date.now() / 500) * 2;
-        
-        clearCanvas();
-        drawRoad();
-        
-        // Tegn bakgrunn og ramme på nytt
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-        ctx.fillRect(canvas.width/2 - textWidth/2, canvas.height/2 - 40, textWidth, 80);
-        
-        ctx.strokeStyle = '#4CAF50';
-        ctx.lineWidth = 3;
-        ctx.strokeRect(canvas.width/2 - textWidth/2, canvas.height/2 - 40, textWidth, 80);
-        
-        // Tegn teksten med varierende størrelse
-        ctx.shadowColor = "rgba(0, 0, 0, 0.7)";
-        ctx.shadowBlur = 5;
-        ctx.shadowOffsetX = 2;
-        ctx.shadowOffsetY = 2;
-        
-        ctx.fillStyle = '#FFFFFF';
-        ctx.font = `bold ${size}px Arial`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(welcomeText, canvas.width / 2, canvas.height / 2);
-        
-        requestAnimationFrame(pulseWelcomeText);
-      }
-    }
-    
-    pulseWelcomeText();
-    ctx.restore();
 
     const camera = {
       x: 0,
@@ -3058,7 +2943,11 @@ document.addEventListener('DOMContentLoaded', () => {
       camera.y += (camera.targetY - camera.y) * camera.easeAmount;
     }
 
+    let lastPowerupDisplay = '';
     function updatePowerUpDisplay() {
+      const displayKey = activePowerUps.map(p => `${p.type}:${Math.floor(p.timeLeft / 6)}`).join('|');
+      if (displayKey === lastPowerupDisplay && document.getElementById('powerupContainer').childElementCount) return;
+      lastPowerupDisplay = displayKey;
       const powerupContainer = document.getElementById('powerupContainer');
       powerupContainer.innerHTML = '';
       if (activePowerUps.length === 0) {
@@ -3651,79 +3540,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // Array to store active power-up effects
     powerUpEffects = [];
 
-    // Initialize sound effects
-    let soundEnabled = false; // Default er nå deaktivert
-    const sounds = {
-      carCrash: new Audio('sounds/car_crash.mp3'),
-      cyclistCrash: new Audio('sounds/cyclist_crash.mp3'),
-      pedestrianCrash: new Audio('sounds/pedestrian_crash.mp3'),
-      powerup: new Audio('sounds/powerup.mp3'),
-      shield: new Audio('sounds/shield.mp3'),
-      speed: new Audio('sounds/speed.mp3'),
-      slowTime: new Audio('sounds/slow_time.mp3'),
-      points: new Audio('sounds/points.mp3'),
-      gameStart: new Audio('sounds/game_start.mp3'),
-      gameOver: new Audio('sounds/game_over.mp3'),
-      scooterEngine: new Audio('sounds/scooter_engine.mp3'),
-      drunkLevel: new Audio('sounds/drunk_level_up.mp3')
-    };
-
-    // Function to play sound effects - nå tomme funksjoner
-    function playSoundEffect(soundName) {
-      // Alle lyder er deaktivert
-        return;
-      }
-      
-    // Deaktiver mottor-lyd-funksjonene
-    function startEngineSound() {
-      // Deaktivert
-      return;
-    }
-
-    function stopEngineSound() {
-      // Deaktivert
-        return;
-      }
-      
-    // Feilhåndtering for lyd - for å sikre at spillet fungerer selv hvis lyd ikke lastes
-    for (const sound in sounds) {
-      sounds[sound].addEventListener('error', function() {
-        console.warn(`Kunne ikke laste lydfil: ${sound}`);
-        // Fortsett spillet selv om lyden feiler - denne tomme funksjonen erstatter den normale play()
-        this.play = function() {};
-      });
-      
-      // Forhåndslast lydfiler
-      sounds[sound].load();
-    }
-
-    // Bedre håndtering av lydavspilling med feilhåndtering
-    function playSoundEffect(soundName) {
-      if (!soundEnabled || !sounds[soundName]) return;
-      
-      try {
-        // Stopp lyden hvis den allerede spilles (unngå overlapping)
-        sounds[soundName].pause();
-        sounds[soundName].currentTime = 0;
-        
-        // Spill lyden med Promise for å håndtere feil
-        const playPromise = sounds[soundName].play();
-        
-        if (playPromise !== undefined) {
-          playPromise.catch(error => {
-            console.warn(`Feil ved avspilling av lyd ${soundName}: ${error.message}`);
-          });
-        }
-      } catch (error) {
-        console.warn(`Kunne ikke spille lyd ${soundName}: ${error.message}`);
-      }
-    }
-
-    // Toggle sound function
-    function toggleSound() {
-      // Vis en melding om at lyden er under utvikling
-      showMessage('Lyd er under utvikling', 120);
-    }
+    // Audio is not enabled in this version. Do not request missing audio files.
+    const sounds = {};
+    function playSoundEffect() {}
+    function startEngineSound() {}
+    function stopEngineSound() {}
 
     function getRandomSafetyTip() {
       const safetyTips = [
@@ -3753,16 +3574,6 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    // Initialize sound toggle button
-    if (soundToggle) {
-      soundToggle.textContent = '🔇'; // Alltid muted
-      
-      // Vis en melding når brukeren klikker på lydknappen
-      soundToggle.addEventListener('click', () => {
-        showMessage('Lyd er under utvikling', 120);
-      });
-    }
-    
     // Initialize clear data button
     const clearDataBtn = document.getElementById('clearDataBtn');
     if (clearDataBtn) {
@@ -3775,6 +3586,10 @@ document.addEventListener('DOMContentLoaded', () => {
           localStorage.removeItem('highscores');
           localStorage.removeItem('highScore');
           localStorage.removeItem('darkMode');
+          localStorage.removeItem('playerName');
+          playerName = 'Anonym';
+          document.body.classList.remove('dark-mode');
+          document.getElementById('darkModeToggle').checked = false;
           
           // Nullstill highscore variabelen og visningen
           highScore = 0;
@@ -3784,7 +3599,7 @@ document.addEventListener('DOMContentLoaded', () => {
           localStorage.setItem('highscores', JSON.stringify([]));
           
           // Vis bekreftelsesmelding
-          showMessage('Alle lagrede data er slettet!', 3000);
+          document.dispatchEvent(new Event('game:data-cleared'));
         }
       });
     }
@@ -3961,7 +3776,7 @@ document.addEventListener('DOMContentLoaded', () => {
       tipElement.style.zIndex = '1000';
       tipElement.style.fontWeight = 'bold';
       
-      document.querySelector('.game-container').appendChild(tipElement);
+      document.querySelector('.game-stage').appendChild(tipElement);
       
       // Forsinkelse for å sikre at elementet vises
       setTimeout(() => {
@@ -4074,92 +3889,59 @@ document.addEventListener('DOMContentLoaded', () => {
       return array;
     }
 
-    // Etter window.addEventListener('keyup', ...) blokken, legg til følgende kode for touch-kontroller:
-
-    // Touch Controls for mobile devices
     function setupTouchControls() {
-      const touchUp = document.getElementById('touchUp');
-      const touchDown = document.getElementById('touchDown');
-      const touchLeft = document.getElementById('touchLeft');
-      const touchRight = document.getElementById('touchRight');
-      
-      // Helper function to handle touch events
-      function handleTouchStart(event, keyToSimulate) {
-        event.preventDefault();
-        keys[keyToSimulate] = true;
-        
-        // Auto-start game if touching a control when not running
-        if (!gameRunning && !gameOver) {
-          startGame();
-        }
-      }
-      
-      function handleTouchEnd(event, keyToSimulate) {
-        event.preventDefault();
-        keys[keyToSimulate] = false;
-      }
-      
-      // Add touch event listeners for up button
-      touchUp.addEventListener('touchstart', (e) => handleTouchStart(e, 'ArrowUp'));
-      touchUp.addEventListener('touchend', (e) => handleTouchEnd(e, 'ArrowUp'));
-      
-      // Add touch event listeners for down button
-      touchDown.addEventListener('touchstart', (e) => handleTouchStart(e, 'ArrowDown'));
-      touchDown.addEventListener('touchend', (e) => handleTouchEnd(e, 'ArrowDown'));
-      
-      // Add touch event listeners for left button
-      touchLeft.addEventListener('touchstart', (e) => handleTouchStart(e, 'ArrowLeft'));
-      touchLeft.addEventListener('touchend', (e) => handleTouchEnd(e, 'ArrowLeft'));
-      
-      // Add touch event listeners for right button
-      touchRight.addEventListener('touchstart', (e) => handleTouchStart(e, 'ArrowRight'));
-      touchRight.addEventListener('touchend', (e) => handleTouchEnd(e, 'ArrowRight'));
-      
-      // Handle touch move to support continuous movement
-      document.querySelectorAll('.touch-button').forEach(button => {
-        button.addEventListener('touchmove', (e) => {
-          e.preventDefault();
-          const touch = e.touches[0];
-          const elements = document.elementsFromPoint(touch.clientX, touch.clientY);
-          
-          // Reset all direction keys
-          keys.ArrowUp = false;
-          keys.ArrowDown = false;
-          keys.ArrowLeft = false;
-          keys.ArrowRight = false;
-          
-          // Set the key based on which element the finger is currently over
-          for (const element of elements) {
-            if (element.id === 'touchUp') keys.ArrowUp = true;
-            if (element.id === 'touchDown') keys.ArrowDown = true;
-            if (element.id === 'touchLeft') keys.ArrowLeft = true;
-            if (element.id === 'touchRight') keys.ArrowRight = true;
-          }
+      for (const button of directionButtons) {
+        button.addEventListener('pointerdown', (event) => {
+          if (event.button !== 0 || gameOver) return;
+          event.preventDefault();
+          if (!gameRunning) startGame();
+          controlPointers.set(event.pointerId, button);
+          button.setPointerCapture(event.pointerId);
+          syncDirectionKeys();
         });
-      });
-      
-      // Prevent default touch behavior on the canvas to avoid scrolling
-      document.getElementById('gameCanvas').addEventListener('touchmove', function(e) {
-        e.preventDefault();
-      }, { passive: false });
-      
-      // Make game buttons work with touch
-      document.querySelectorAll('button').forEach(button => {
-        button.addEventListener('touchstart', (e) => {
-          e.preventDefault();
-          button.click();
+        button.addEventListener('lostpointercapture', (event) => {
+          controlPointers.delete(event.pointerId);
+          syncDirectionKeys();
         });
+        // Keyboard / assistive technology: a focused arrow acts like an arrow key.
+        button.addEventListener('keydown', (event) => {
+          if (![' ', 'Enter'].includes(event.key) || gameOver) return;
+          event.preventDefault();
+          if (!gameRunning) startGame();
+          keyboardKeys.add(button.dataset.key);
+          syncDirectionKeys();
+        });
+        button.addEventListener('keyup', (event) => {
+          if (![' ', 'Enter'].includes(event.key)) return;
+          event.preventDefault();
+          keyboardKeys.delete(button.dataset.key);
+          syncDirectionKeys();
+        });
+        button.addEventListener('blur', () => {
+          keyboardKeys.delete(button.dataset.key);
+          syncDirectionKeys();
+        });
+      }
+      window.addEventListener('pointermove', (event) => {
+        if (!controlPointers.has(event.pointerId)) return;
+        const button = document.elementFromPoint(event.clientX, event.clientY)?.closest('.touch-button');
+        controlPointers.set(event.pointerId, button || null);
+        syncDirectionKeys();
       });
+      for (const type of ['pointerup', 'pointercancel']) {
+        window.addEventListener(type, (event) => {
+          controlPointers.delete(event.pointerId);
+          syncDirectionKeys();
+        });
+      }
+      document.querySelector('.touch-controls').addEventListener('contextmenu', event => event.preventDefault());
     }
-    
+
     // Initialize touch controls
     setupTouchControls();
+    updatePowerUpDisplay();
   } catch (error) {
     console.error('Game initialization error:', error);
     alert('Error starting game: ' + error.message);
   }
-  
-  // Initialize game
-  updatePowerUpDisplay();
-  initRoadLines();
 });
