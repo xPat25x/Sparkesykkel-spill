@@ -1,0 +1,11 @@
+{
+  "name": "deathtrip-sparkesykkel",
+  "private": true,
+  "scripts": {
+    "check": "node --check game.js && node --check interface.js",
+    "test": "node --test tests/*.test.cjs"
+  },
+  "devDependencies": {
+    "playwright": "1.62.1"
+  }
+}
