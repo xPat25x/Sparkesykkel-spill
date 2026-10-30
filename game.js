@@ -355,7 +355,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const vertical = Number(!!(keys.ArrowDown || keys.s)) -
                          Number(!!(keys.ArrowUp || keys.w));
         const diagonalFactor = horizontal && vertical ? Math.SQRT1_2 : 1;
-        const acceleration = 0.58 * speedFactor * diagonalFactor;
+        // Let the existing speed power-up increase acceleration as well as
+        // the maximum speed, so it still makes the scooter noticeably faster.
+        const acceleration = 0.58 * (this.speed / 6.5) * speedFactor * diagonalFactor;
 
         // Gradual acceleration while steering, stronger braking on release.
         // This prevents instant jumps without making the scooter feel slippery.
