@@ -31,6 +31,9 @@ Rekorder og lagret navn tilhører denne nettleseren og enheten. Topplisten er lo
 - Power-ups har tydelige tegnede symboler. En kort melding bekrefter hva du har samlet, og ny personlig rekord markeres underveis.
 - En lesbar måler viser tid på veien og påvirkning i simuleringen. Resultatvinduet viser turens tid og antall power-ups.
 - Spillklokken kjører med 60 faste simuleringsteg per sekund. Bevegelse, hindringer og varighet på effekter følger samme tempo på skjermer med ulik oppdateringsfrekvens.
+- Styringen har en roligere toppfart (6,5 i stedet for 11), gradvis akselerasjon og mykere oppbremsing når du slipper pilene. Diagonal bevegelse er normalisert.
+- Beruselsessimuleringen beholder gradvis svekket kontroll, men erstatter tilfeldig skjermglitch, brå zoom, fargeblink og rykkvis bevegelse med roligere, kontinuerlig svai. Dette gjør det enklere å følge veien og oppdage hindringer.
+- Farts-power-upen fungerer fortsatt som før og øker den nye grunnfarten midlertidig med 1,8×.
 - En ny pickup av samme type fornyer varigheten. Farts- og slow-motion-effekter blir riktig fjernet når tiden er ute, og en ny tur starter med grunnfarten.
 
 ## Kjør lokalt
@@ -54,7 +57,7 @@ npm run check
 npm test
 ```
 
-Testene bruker Chromium til å sjekke 15 skjermstørrelser fra 320 × 568 til 1920 × 1080, flerberøring, tastatur, rotasjon, navnelagring, tema og nullstilling. Testene kontrollerer også pause, lik simulering på 30–144 Hz, power-up-fornying, lydvalg og håndtering av ødelagte lokale rekorder. Klokken testes separat på opptil 240 Hz. En egen kontroll sammenligner bevegelse, kollisjonsområder, progresjon og power-up-verdier med hovedgrenen før denne oppdateringen. Git-historikken må være tilgjengelig for denne kontrollen.
+Testene bruker Chromium til å sjekke 15 skjermstørrelser fra 320 × 568 til 1920 × 1080, flerberøring, tastatur, rotasjon, navnelagring, tema og nullstilling. Testene kontrollerer også pause, lik simulering på 30–144 Hz, power-up-fornying, lydvalg og håndtering av ødelagte lokale rekorder. Klokken testes separat på opptil 240 Hz. En egen kontroll sammenligner kollisjonsområder, progresjon og power-up-verdier med en tidligere versjon. Styringen har egne tester for akselerasjon, bremsing og diagonal fart. Git-historikken må være tilgjengelig for denne kontrollen.
 
 Du kan bruke en eksisterende Chromium-installasjon ved å sette `CHROMIUM_EXECUTABLE_PATH` til nettleserens programfil.
 
