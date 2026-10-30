@@ -399,10 +399,10 @@ test("The speed pickup still makes the scooter physically faster", async () => {
   await page.click("#startBtn");
   await page.keyboard.down("ArrowRight");
   const result = await page.evaluate(() => {
-    __stepFrames(35);
+    __stepFrames(20);
     const normal = __gameTest.player.speedX;
     __gameTest.collectPowerUp({ type: "speed", duration: 240, color: "#ff0", icon: "⚡" });
-    __stepFrames(35);
+    __stepFrames(20);
     return { normal, boosted: __gameTest.player.speedX, limit: __gameTest.player.speed };
   });
   assert.ok(result.boosted > result.normal * 1.4, "Boost must accelerate the scooter");
