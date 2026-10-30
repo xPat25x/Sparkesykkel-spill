@@ -317,7 +317,7 @@ document.addEventListener('DOMContentLoaded', () => {
       y: canvas.height - 100,
       width: 50,
       height: 75,
-      speed: 11, // Increased from 9 to 11 for faster response
+      speed: 6.5, // Reduced base speed for more precise steering
       tilt: 0,
       targetTilt: 0,
       speedX: 0,
@@ -346,92 +346,51 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.restore();
       },
       update(keys, speedFactor) {
-        // Don't process movement if game is not running
         if (!gameRunning) return;
-        
-        // Oppdater berulelsesrelaterte verdier
+
+        // A consistent input axis works with both keyboard and multi-touch.
+        // Normalizing diagonal input prevents diagonal movement being faster.
+        const horizontal = Number(!!(keys.ArrowRight || keys.d)) -
+                           Number(!!(keys.ArrowLeft || keys.a));
+        const vertical = Number(!!(keys.ArrowDown || keys.s)) -
+                         Number(!!(keys.ArrowUp || keys.w));
+        const diagonalFactor = horizontal && vertical ? Math.SQRT1_2 : 1;
+        const acceleration = 0.58 * speedFactor * diagonalFactor;
+
+        // Gradual acceleration while steering, stronger braking on release.
+        // This prevents instant jumps without making the scooter feel slippery.
+        this.speedX = this.speedX * (horizontal ? 0.90 : 0.76) +
+                      horizontal * acceleration;
+        this.speedY = this.speedY * (vertical ? 0.90 : 0.76) +
+                      vertical * acceleration;
+        this.targetTilt = horizontal * 0.16;
+
         if (isDrunk && drunkLevel > 0) {
-          // Hyppigere oppdateringer for svingevinkel for å forbedre responsivitet
-          swayAngle += 0.08 * speedFactor; // Økt fra 0.05 for skarpere bevegelse
-          
-          // Beregn kun synsforstyrrelser med jevne mellomrom
-          if (frameCount % 5 === 0) {
-            visionBlur = 3 + Math.sin(Math.floor(frameCount * 0.03)) * 2 * drunkLevel;
-          }
-          
-          // Endrer tilfeldig retning når beruset, med høyere intensitet
-          randomDirectionTimer--;
-          if (randomDirectionTimer <= 0) {
-            // Sterkere tilfeldige retningsendringer
-            lastRandomDirection = (Math.random() - 0.5) * drunkLevel * 3; // Økt fra 2 til 3
-            // Kortere tid mellom tilfeldige retningsendringer for mer uforutsigbar bevegelse
-            randomDirectionTimer = Math.floor(Math.random() * 40) + 20; // Redusert fra 80+50 til 40+20
-          }
+          // Keep the educational loss-of-control effect, but use continuous
+          // swaying rather than new random steering impulses every frame.
+          swayAngle += 0.045 * speedFactor;
+          this.speedX += Math.sin(swayAngle * 0.7) * drunkLevel * 0.10;
+          this.speedY += Math.sin(swayAngle * 0.47) * drunkLevel * 0.075;
+          this.targetTilt += Math.sin(swayAngle * 0.8) * drunkLevel * 0.09;
         }
-          
-        // Nedbremsing – høyere verdi = mindre friksjon, spilleren holder farten bedre
-        this.speedX *= 0.93;
-        this.speedY *= 0.93;
-        
-        // Normale kontroller, men påvirket av beruselsesnivå
-        if ((keys.ArrowLeft || keys.a) && this.x > this.width / 2) {
-          this.speedX -= 0.8 * speedFactor; // Økt fra 0.5 for raskere respons
-          this.targetTilt = -0.2;
-          
-          // Beruselseseffekter gjør kontrollene mer uforutsigbare og responsive
-          if (isDrunk && drunkLevel > 0) {
-            // Mer responsive tilfeldige beregninger
-            this.speedX += (Math.random() - 0.7) * drunkLevel * 1.5; // Økt fra 1.0 til 1.5
-            this.targetTilt = -0.2 - Math.random() * drunkLevel * 0.3; // Økt fra 0.2 til 0.3
-          }
+
+        this.tilt += (this.targetTilt - this.tilt) * 0.11;
+        const velocity = Math.hypot(this.speedX, this.speedY);
+        if (velocity > this.speed) {
+          const limit = this.speed / velocity;
+          this.speedX *= limit;
+          this.speedY *= limit;
         }
-        if ((keys.ArrowRight || keys.d) && this.x < canvas.width - this.width / 2) {
-          this.speedX += 0.8 * speedFactor; // Økt fra 0.5 for raskere respons
-          this.targetTilt = 0.2;
-          
-          // Beruselseseffekter for høyrebevegelse
-          if (isDrunk && drunkLevel > 0) {
-            this.speedX += (Math.random() - 0.3) * drunkLevel * 1.5; // Økt fra 1.0 til 1.5
-            this.targetTilt = 0.2 + Math.random() * drunkLevel * 0.3; // Økt fra 0.2 til 0.3
-          }
-        }
-        if (!(keys.ArrowLeft || keys.a || keys.ArrowRight || keys.d)) {
-          this.targetTilt = 0;
-        }
-        if ((keys.ArrowUp || keys.w) && this.y > this.height / 2) {
-          this.speedY -= 0.8 * speedFactor; // Økt fra 0.5 for raskere respons
-          
-          // Beruselseseffekter for oppover-bevegelse
-          if (isDrunk && drunkLevel > 0) {
-            this.speedY += (Math.random() - 0.7) * drunkLevel * 1.3; // Økt fra 1.0 til 1.3
-            this.speedX += (Math.random() - 0.5) * drunkLevel * 0.8; // Økt fra 0.5 til 0.8
-          }
-        }
-        if ((keys.ArrowDown || keys.s) && this.y < canvas.height - this.height / 2) {
-          this.speedY += 0.8 * speedFactor; // Økt fra 0.5 for raskere respons
-          
-          // Beruselseseffekter for nedover-bevegelse
-          if (isDrunk && drunkLevel > 0) {
-            this.speedY += (Math.random() - 0.3) * drunkLevel * 1.3; // Økt fra 1.0 til 1.3
-            this.speedX += (Math.random() - 0.5) * drunkLevel * 0.8; // Økt fra 0.5 til 0.8
-          }
-        }
-        
-        // Bruk tilfeldig styring når beruset, selv uten input
-        if (isDrunk && drunkLevel > 0) {
-          // Bruk skarpere tilfeldig styring
-          this.speedX += lastRandomDirection * 0.3 * drunkLevel; // Økt fra 0.2 til 0.3
-          this.speedY += (Math.random() - 0.5) * drunkLevel * 0.5; // Økt fra 0.3 til 0.5
-        }
-        
-        // Faster tilt response even when drunk
-        this.tilt += (this.targetTilt - this.tilt) * (isDrunk && drunkLevel > 0.3 ? 0.1 : 0.15); // Increased from 0.05 to 0.1 when drunk
-        this.speedX = Math.max(-this.speed, Math.min(this.speedX, this.speed));
-        this.speedY = Math.max(-this.speed, Math.min(this.speedY, this.speed));
-        this.x += this.speedX;
-        this.y += this.speedY;
-        this.x = Math.max(this.width / 2, Math.min(this.x, canvas.width - this.width / 2));
-        this.y = Math.max(this.height / 2, Math.min(this.y, canvas.height - this.height / 2));
+
+        this.x = Math.max(this.width / 2,
+          Math.min(this.x + this.speedX, canvas.width - this.width / 2));
+        this.y = Math.max(this.height / 2,
+          Math.min(this.y + this.speedY, canvas.height - this.height / 2));
+        // Do not accumulate invisible velocity against the playfield edges.
+        if ((this.x === this.width / 2 && this.speedX < 0) ||
+            (this.x === canvas.width - this.width / 2 && this.speedX > 0)) this.speedX = 0;
+        if ((this.y === this.height / 2 && this.speedY < 0) ||
+            (this.y === canvas.height - this.height / 2 && this.speedY > 0)) this.speedY = 0;
       }
     };
 
@@ -1182,65 +1141,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Add screen "tug" and zoom effect that gets stronger with drunk level
     function applyDrunkScreenEffects() {
-      // Don't apply effects if game is not running, player is not drunk, or drunk level is too low
-      if (!gameRunning || !isDrunk || drunkLevel <= 0.1) {
-        // Make sure we clean up any existing effects
-        ctx.globalAlpha = 1.0;
-        ctx.globalCompositeOperation = 'source-over';
-        ctx.filter = 'none';
-        return false;
-      }
-      
-      // Calculate zoom effect based on drunk level
-      const zoomFactor = 1 + (Math.sin(frameCount * 0.02) * 0.05 * drunkLevel);
-      const zoomOffsetX = (canvas.width / 2) * (1 - zoomFactor);
-      const zoomOffsetY = (canvas.height / 2) * (1 - zoomFactor);
-      
-      // Increase zoom effect periodically for a "pulse" effect
-      if (drunkLevel > 0.3 && Math.random() < 0.01 * drunkLevel) {
-        // Apply stronger zoom effect
-        ctx.save();
-        const pulseZoom = 1 + (0.1 * drunkLevel);
-        ctx.translate(canvas.width / 2, canvas.height / 2);
-        ctx.scale(pulseZoom, pulseZoom);
-        ctx.translate(-canvas.width / 2, -canvas.height / 2);
-        
-        // Keep the pulse as a visual transform; never skip a simulation tick.
-        frameTransformSaves++;
-        
-        // Semi-transparent overlay - fjernet
-        // ctx.fillStyle = `rgba(255, 150, 50, ${0.1 * drunkLevel})`;
-        // ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        return false;
-      }
-      
-      // Apply zoom and translation for drunk effect
-      if (drunkLevel > 0.2) {
-        ctx.save();
-        frameTransformSaves++;
-        ctx.translate(canvas.width / 2, canvas.height / 2);
-        ctx.scale(zoomFactor, zoomFactor);
-        ctx.translate(-canvas.width / 2 + Math.sin(frameCount * 0.01) * 5 * drunkLevel, 
-                      -canvas.height / 2 + Math.sin(frameCount * 0.02) * 3 * drunkLevel);
-        
-        // Apply more intense effects at higher drunk levels
-        if (drunkLevel > 0.6 && frameCount % 90 < 2) {
-          // Strong pulsing glitch effect
-          ctx.scale(1 + Math.random() * 0.1, 1 + Math.random() * 0.05);
-          
-          // RGB shift effect
-          if (frameCount % 90 === 0) {
-            ctx.drawImage(canvas, Math.random() * 5 * drunkLevel, 0);
-            ctx.globalCompositeOperation = 'lighten';
-            ctx.drawImage(canvas, -Math.random() * 8 * drunkLevel, 0);
-          }
-        }
-        
-        return false; // Continue with normal rendering, just keep the context transformation
-      }
-      
-      return false;
+      if (!gameRunning || !isDrunk || drunkLevel <= 0.1) return;
+      // Slow, continuous camera movement replaces abrupt random zooms and
+      // costly canvas-on-canvas glitch copies that appeared to 'click'.
+      const intensity = (drunkLevel - 0.1) / 0.9;
+      const t = frameCount / 60;
+      const zoom = 1 + Math.sin(t * 1.1) * 0.008 * intensity;
+      ctx.save();
+      frameTransformSaves++;
+      ctx.translate(canvas.width / 2, canvas.height / 2);
+      ctx.scale(zoom, zoom);
+      ctx.translate(-canvas.width / 2 + Math.sin(t * 0.85) * 2 * intensity,
+                    -canvas.height / 2 + Math.sin(t * 0.62) * 1.5 * intensity);
     }
 
     // *** HOVED-SPILLØKKE ***
@@ -1349,123 +1261,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
       
-      // Apply drunk vision effects - simplified for better performance
-      if (isDrunk && drunkLevel > 0.1) {
-        // Apply screen zoom and distortion effects
-        applyDrunkScreenEffects();
+      // Subtle, continuous impaired-vision movement instead of flashing,
+      // random screen shifts and frame-copy glitches.
+      if (isDrunk && drunkLevel > 0.1) applyDrunkScreenEffects();
 
-        // Grønn flash-effekt hver 7 sekunder (420 frames ved 60 fps)
-        // Flash varer i 2 sekunder (120 frames)
-        const flashDuration = 120; // 2 sekunder ved 60 fps
-        const flashInterval = 420; // 7 sekunder totalt (2 sek flash + 5 sek pause)
-        
-        if (!isGreenFlashing && frameCount - lastGreenFlashTime > flashInterval) {
-          // Start en ny flash
-          isGreenFlashing = true;
-          lastGreenFlashTime = frameCount;
-        } else if (isGreenFlashing && frameCount - lastGreenFlashTime > flashDuration) {
-          // Avslutt flash etter 2 sekunder
-          isGreenFlashing = false;
-        }
-        
-        // Hvis flash er aktiv, tegn en lysere grønn overlay med høyere synlighet
-        if (isGreenFlashing && drunkLevel > 0.3) {
-          ctx.save();
-          // Lysere grønn farge men mer gjennomsiktig for bedre spillkontroll
-          ctx.fillStyle = 'rgba(180, 255, 180, 0.18)'; // Lysere grønn med balansert opacity
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-          ctx.restore();
-        }
-        
-        // Only apply visual effects when drunk level is significant
-        // No blur filter - it's too performance intensive
-        // ctx.filter = `blur(${Math.min(2, visionBlur * drunkLevel)}px)`;
-        
-        // Fjernet overlayet helt
-        // ctx.fillStyle = `rgba(255, 230, 150, ${drunkLevel * 0.01})`;
-        // ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        // Erstatt med mer synlige men kortvarige glitch/flash effekter
-        if (Math.random() < drunkLevel * 0.10) { // Økt fra 0.07 til 0.10 (original var 0.15)
-          ctx.save();
-          // Tilfeldig fargevalg for glitch med høyere synlighet men mer gjennomsiktig
-          const colors = ['rgba(255, 130, 130, 0.15)', 'rgba(130, 130, 255, 0.15)']; // Økt opacity fra 0.12 til 0.15
-          ctx.fillStyle = colors[Math.floor(Math.random() * colors.length)];
-          
-          // Tegn bare en del av skjermen for å ikke blokkere hele visningen
-          const glitchHeight = canvas.height * 0.18; // Økt fra 0.15 til 0.18
-          const glitchY = Math.random() * (canvas.height - glitchHeight);
-          ctx.fillRect(0, glitchY, canvas.width, glitchHeight);
-          ctx.restore();
-        }
-        
-        // Double vision with improved visibility - only for higher drunk levels
-        if (drunkLevel > 0.4) {
-          const doubleVisionOffset = Math.sin(Math.floor(frameCount * 0.02)) * drunkLevel * 1.2; // Økt fra 1.0 til 1.2
-          ctx.save();
-          // Balansert alpha for dobbeltvisjon - synlig men ikke for forstyrrende
-          frameTransformSaves++;
-          ctx.globalAlpha = 0.10 * drunkLevel; // Økt fra 0.08 til 0.10
-          ctx.translate(doubleVisionOffset, 0);
-        }
-        
-        // Apply camera shake effect based on drunk level
-        if (cameraShakeEnabled && drunkLevel > 0.2) {
-          // Calculate shake intensity based on drunk level
-          const baseShakeIntensity = drunkLevel * 1.8; // Økt fra 1.5 til 1.8
-          
-          // Add random shake offset
-          const shakeX = (Math.random() - 0.5) * baseShakeIntensity;
-          const shakeY = (Math.random() - 0.5) * baseShakeIntensity;
-          
-          // Apply the shake to the canvas
-          ctx.translate(shakeX, shakeY);
-          
-          // Gradually reduce camera shake intensity
-          cameraShake *= 0.95;
-        }
-        
-        // Random glitch effects at higher drunk levels
-        if (drunkLevel > 0.5 && Math.random() < drunkLevel * 0.02) { // Økt fra 0.015 til 0.02
-          isGlitching = true;
-          lastGlitchTime = frameCount;
-          glitchIntensity = Math.random() * drunkLevel * 1.4; // Økt fra 1.0 til 1.4
-          glitchOffsetX = (Math.random() - 0.5) * glitchIntensity * 18; // Økt fra 15 til 18
-          glitchOffsetY = (Math.random() - 0.5) * glitchIntensity * 9; // Økt fra 7 til 9
-        }
-        
-        // Apply active glitch effect with improved visibility
-        if (isGlitching && frameCount - lastGlitchTime < 4) { // Økt fra 3 til 4 frames
-          ctx.save();
-          ctx.globalCompositeOperation = 'difference';
-          ctx.globalAlpha = 0.7; // Økt fra 0.6 til 0.7
-          ctx.drawImage(canvas, glitchOffsetX, glitchOffsetY);
-          ctx.restore();
-          
-          // Øk hyppigheten og synligheten av fargekanal-forskyvning
-          if (Math.random() < 0.6) { // Økt fra 0.5 til 0.6
-            ctx.save();
-            ctx.globalCompositeOperation = 'screen';
-            ctx.fillStyle = 'rgba(255, 80, 80, 0.12)'; // Økt fra 0.09 til 0.12
-            ctx.fillRect(glitchOffsetX, 0, canvas.width, canvas.height);
-            ctx.restore();
-          }
-        } else {
-          isGlitching = false;
-        }
-        
-        // Øk hyppigheten av glitch-effekter
-        if (drunkLevel > 0.35 && Math.random() < drunkLevel * 0.06) { // Endret krav fra 0.4 til 0.35 og økt sannsynlighet fra 0.04 til 0.06
-          isGlitching = true;
-          lastGlitchTime = frameCount;
-          glitchIntensity = Math.random() * drunkLevel * 2.0; // Økt fra 1.5 til 2.0
-          glitchOffsetX = (Math.random() - 0.5) * glitchIntensity * 20; // Økt fra 15 til 20
-          glitchOffsetY = (Math.random() - 0.5) * glitchIntensity * 10; // Økt fra 8 til 10
-        }
-      }
-      
       // Apply road distortion based on drunk level
-      roadDistortion = drunkLevel * 30; // Økt fra 25 til 30
+      roadDistortion = drunkLevel * 12; // Visible but less abrupt road waviness
       
       drawRoad();
       
@@ -1541,26 +1342,8 @@ document.addEventListener('DOMContentLoaded', () => {
         drawHitbox(playerHitbox, 'rgba(0, 255, 0, 0.5)');
       }
       
-      if (Math.abs(player.speedX) > 2 || Math.abs(player.speedY) > 2) {
-        ctx.strokeStyle = 'rgba(255,255,255,0.4)';
-        ctx.lineWidth = 2;
-        const speedFactor = Math.max(Math.abs(player.speedX), Math.abs(player.speedY));
-        const lineCount = Math.floor(speedFactor * 2);
-        for (let i = 0; i < lineCount; i++) {
-          const angle = Math.random() * Math.PI * 2;
-          const length = 10 + speedFactor * 3;
-          const startX = player.x + Math.cos(angle) * 20;
-          const startY = player.y + Math.sin(angle) * 20;
-          ctx.beginPath();
-          ctx.moveTo(startX, startY);
-          ctx.lineTo(
-            startX - player.speedX * 3 * Math.random(),
-            startY - player.speedY * 3 * Math.random()
-          );
-          ctx.stroke();
-        }
-      }
-      
+      // Avoid per-frame random speed streaks that flash beside the scooter.
+
       // Process obstacles with optimized collision detection
       for (let i = obstacles.length - 1; i >= 0; i--) {
         const obstacle = obstacles[i];
@@ -2330,7 +2113,7 @@ document.addEventListener('DOMContentLoaded', () => {
       player.y = canvas.height - 100;
       player.tilt = 0;
       player.targetTilt = 0;
-      player.speed = 11;
+      player.speed = 6.5;
       player.speedX = 0;
       player.speedY = 0;
       
