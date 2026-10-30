@@ -352,6 +352,48 @@ test("Keyboard controls, initial entities and rotation keep finite, unchanged ga
   await finish(page);
 });
 
+test("Steering is slower, accelerates gradually and brakes smoothly on release", async () => {
+  const page = await open(390, 844, true, true);
+  await page.click("#startBtn");
+  await page.evaluate(() => __stepFrames(2));
+  await page.keyboard.down("ArrowRight");
+  const moving = await page.evaluate(() => {
+    __stepFrames(3);
+    const initial = __gameTest.player.speedX;
+    __stepFrames(20);
+    return { initial, cruising: __gameTest.player.speedX, cap: __gameTest.player.speed };
+  });
+  assert.equal(moving.cap, 6.5);
+  assert.ok(moving.initial > 0 && moving.initial < moving.cruising);
+  assert.ok(moving.cruising > 3 && moving.cruising <= moving.cap);
+  await page.keyboard.up("ArrowRight");
+  const stopping = await page.evaluate(() => {
+    const initial = __gameTest.player.speedX;
+    __stepFrames(15);
+    return { initial, after: __gameTest.player.speedX };
+  });
+  assert.ok(stopping.after > 0 && stopping.after < stopping.initial * 0.1);
+  await finish(page);
+});
+
+test("Diagonal steering does not exceed the scooter's speed limit", async () => {
+  const page = await open(390, 844, true, true);
+  await page.click("#startBtn");
+  await page.evaluate(() => __stepFrames(2));
+  await page.keyboard.down("ArrowRight");
+  await page.keyboard.down("ArrowUp");
+  const speed = await page.evaluate(() => {
+    __stepFrames(40);
+    const { speedX, speedY, speed: maxSpeed } = __gameTest.player;
+    return { magnitude: Math.hypot(speedX, speedY), maxSpeed };
+  });
+  assert.ok(speed.magnitude <= speed.maxSpeed + 1e-8);
+  assert.ok(speed.magnitude > 0);
+  await page.keyboard.up("ArrowRight");
+  await page.keyboard.up("ArrowUp");
+  await finish(page);
+});
+
 test("Power-up collection still works and uses the original duration and speed rules", async () => {
   const page = await open(390, 844, true, true);
   await page.click("#startBtn");
@@ -482,7 +524,7 @@ test("Reset clears the advertised data and restores the visible theme", async ()
   await finish(page);
 });
 
-test("Current movement, collision sizes, spawn progression and power-up values are preserved", async () => {
+test("Collision sizes, spawn progression and power-up values are preserved", async () => {
   const original = execFileSync(
     "git",
     ["show", "e601db159374195ec13d72a44fddeeb0712ef5ac:game.js"],
@@ -490,7 +532,6 @@ test("Current movement, collision sizes, spawn progression and power-up values a
   );
   const current = await readFile(path.join(root, "game.js"), "utf8");
   for (const [start, end] of [
-    ["    const player = {", "    function getObstacleType()"],
     ["    function getObstacleType()", "    function createObstacle()"],
     ["    function checkCollision(", "    function clearCanvas("],
     ["    let powerUpTypes =", "    activePowerUps = [];"],
@@ -615,7 +656,7 @@ test("Repeated speed pickups refresh their timer once and never leak into a new 
     __gameTest.startGame();
     return [first, repeated, expired, __gameTest.player.speed];
   });
-  assert.deepEqual(result, [19.8, 19.8, 11, 11]);
+  assert.deepEqual(result, [11.7, 11.7, 6.5, 6.5]);
   await finish(page);
 });
 
@@ -763,6 +804,6 @@ test("A real collision finishes its animation and the result can start a clean n
     await page.locator("main").getAttribute("data-state"),
     "playing",
   );
-  assert.equal(await page.evaluate(() => __gameTest.player.speed), 11);
+  assert.equal(await page.evaluate(() => __gameTest.player.speed), 6.5);
   await finish(page);
 });
