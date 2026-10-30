@@ -394,6 +394,23 @@ test("Diagonal steering does not exceed the scooter's speed limit", async () => 
   await finish(page);
 });
 
+test("The speed pickup still makes the scooter physically faster", async () => {
+  const page = await open(390, 844, true, true);
+  await page.click("#startBtn");
+  await page.keyboard.down("ArrowRight");
+  const result = await page.evaluate(() => {
+    __stepFrames(35);
+    const normal = __gameTest.player.speedX;
+    __gameTest.collectPowerUp({ type: "speed", duration: 240, color: "#ff0", icon: "⚡" });
+    __stepFrames(35);
+    return { normal, boosted: __gameTest.player.speedX, limit: __gameTest.player.speed };
+  });
+  assert.ok(result.boosted > result.normal * 1.4, "Boost must accelerate the scooter");
+  assert.ok(result.boosted <= result.limit + 1e-8);
+  await page.keyboard.up("ArrowRight");
+  await finish(page);
+});
+
 test("Power-up collection still works and uses the original duration and speed rules", async () => {
   const page = await open(390, 844, true, true);
   await page.click("#startBtn");
