@@ -1232,28 +1232,8 @@ document.addEventListener('DOMContentLoaded', () => {
           if (drunkLevel > 0.1) {
             showMessage("Beruselsen øker! 🍺", 60);
             
-            // Add dramatic effect when drunk level increases
-            // Flash effect
-            const flashOverlay = document.createElement('div');
-            flashOverlay.style.position = 'absolute';
-            flashOverlay.style.top = '0';
-            flashOverlay.style.left = '0';
-            flashOverlay.style.width = '100%';
-            flashOverlay.style.height = '100%';
-            flashOverlay.style.backgroundColor = 'rgba(255, 200, 100, 0.3)';
-            flashOverlay.style.pointerEvents = 'none';
-            flashOverlay.style.zIndex = '1000';
-            flashOverlay.style.transition = 'opacity 0.5s';
-            
-            document.querySelector('.game-stage').appendChild(flashOverlay);
-            
-            setTimeout(() => {
-              flashOverlay.style.opacity = '0';
-              setTimeout(() => flashOverlay.remove(), 500);
-            }, 300);
-            
-            // Add a camera shake effect
-            cameraShake = 5 * drunkLevel;
+            // Keep the score milestone message, but avoid flashing an
+            // extra DOM overlay over the playfield.
           }
           
           console.log(`Drunk level increased to ${drunkLevel.toFixed(2)} at score ${score}`);
