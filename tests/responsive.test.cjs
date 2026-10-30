@@ -656,7 +656,7 @@ test("Repeated speed pickups refresh their timer once and never leak into a new 
     __gameTest.startGame();
     return [first, repeated, expired, __gameTest.player.speed];
   });
-  assert.deepEqual(result, [11.7, 11.7, 6.5, 6.5]);
+  assert.deepEqual(result, [6.5 * 1.8, 6.5 * 1.8, 6.5, 6.5]);
   await finish(page);
 });
 
